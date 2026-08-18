@@ -1,0 +1,6 @@
+product_id,product_name,category,unit_price,active
+P001,Data Starter Kit,software,120.50,true
+P002,Review Seat,subscription,44.50,true
+P003,Usage Credit,service,0.75,true
+P004,Archive Export,service,35.20,false
+P005,Quality Monitor,hardware,102.50,true

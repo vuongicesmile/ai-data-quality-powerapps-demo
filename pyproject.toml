@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-data-quality-platform"
+version = "0.1.0"
+description = "SharePoint and Power Apps driven data quality demo platform"
+requires-python = ">=3.11"
+dependencies = [
+  "boto3>=1.35,<2",
+  "fastapi>=0.116,<1",
+  "pydantic>=2.10,<3",
+  "pydantic-settings>=2.7,<3",
+  "requests>=2.32,<3",
+  "uvicorn[standard]>=0.34,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "apps/api/src/ai_data_quality_api",
+  "packages/data-quality-core/src/data_quality",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["apps/api/src", "packages/data-quality-core/src"]
+testpaths = ["apps/api/tests", "packages/data-quality-core/tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

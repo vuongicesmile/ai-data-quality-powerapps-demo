@@ -1,0 +1,6 @@
+order_id,customer_id,order_date,status,total_amount
+O1001,C001,2026-06-01,paid,120.50
+O1002,C002,2026-06-02,paid,89.00
+O1003,C001,2026-06-03,shipped,240.75
+O1004,C004,2026-06-04,cancelled,35.20
+O1005,C005,2026-06-05,paid,410.00
