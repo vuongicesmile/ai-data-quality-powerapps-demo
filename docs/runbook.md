@@ -1,55 +1,42 @@
-# Local runbook
+# Power Platform runbook
 
-## Fast deterministic mode
+## Local worker/UI preview
 
-This mode uses local CSV as the source but runs the real SeaweedFS Bronze,
-FastAPI workflow and ClickHouse Silver/Gold adapters.
-
-```bash
-cp .env.example .env
-docker compose up -d clickhouse seaweedfs
-docker compose build api
-docker compose up -d --no-deps api
-python3 scripts/smoke_test.py
-```
-
-Success is:
-
-```text
-PASS: 13 lifecycle actions; progress=100%
-```
-
-Open API docs at `http://localhost:8000/docs`. Stop services with
-`docker compose down`; add `--volumes` only when intentionally deleting local
-demo data.
-
-## Full orchestration mode
-
-Set `ORCHESTRATION_MODE=airflow` and run:
+Copy `.env.example` to `.env`, supply a development SharePoint/Dataverse
+environment and start:
 
 ```bash
 docker compose up --build
 ```
 
-Airflow is at `http://localhost:8080`, the API at `http://localhost:8000`, and
-the Code App preview at `http://localhost:4173`. The API triggers
-`sharepoint_generic_dataset_bronze_ingestion`; on success it syncs the latest
-Bronze manifest into the workflow.
+Only the stateless worker and frontend preview run locally. Dataverse and
+SharePoint remain the durable services; there are no local Airflow, PostgreSQL,
+SeaweedFS, or ClickHouse containers.
 
-For a real SharePoint run, also set the variables in `sharepoint-setup.md`.
+## Governed lifecycle
 
-## Verification commands
+1. Start `DQ_StartIngestion` from the Code App.
+2. Observe `dq_ingestionrun` progress and the SharePoint Bronze manifest.
+3. Discover/profile, then review and execute rules.
+4. Review mappings and approve Bronze.
+5. Publish generic Silver rows, inspect rejections, and approve Silver.
+6. Author/version/review a Gold recipe, publish results, reconcile, and approve
+   Gold.
+7. Confirm lifecycle 100%, `dq_activity`, and Dataverse audit history.
 
-```bash
-docker run --rm -v "$PWD:/work" -w /work python:3.11-slim \
-  sh -c "pip install -q -e '.[dev]' && ruff check . && pytest -q"
-cd apps/power-app && npm ci && npm run build
-docker compose config --quiet
-python3 scripts/smoke_test.py
-```
+## Operational diagnosis
 
-Inspect service health and logs with `docker compose ps` and
-`docker compose logs --tail=100 <service>`. A failed layer precondition returns
-HTTP 409; upstream authentication, permission and availability failures have
-explicit error types in the JSON envelope.
+- `401`: worker Entra credential/token audience is invalid.
+- `403` Graph: verify `Sites.Selected` and selected-site write grant.
+- `403` Dataverse: verify application user and `DQ Backend Application` role.
+- `404`: verify site, library, folder, Dataverse entity-set logical names, and
+  solution deployment.
+- `409/412`: stale Dataverse ETag; refresh before repeating review/approval.
+- `429`: respect Retry-After; the adapters retry within configured bounds.
+- Flow FAILED: inspect the failure scope and correlated `dq_ingestionrun`.
 
+## Tenant acceptance
+
+Use the Phase 9 checklist in the migration document. Do not remove the
+disconnected legacy adapters until the real tenant completes the full
+SharePoint-to-Gold path.

@@ -142,10 +142,10 @@ export function App() {
 
       {tab === "Silver" && <div className="content-grid">
         <section className="panel panel-wide"><header className="panel-header"><div><p className="eyebrow">Medallion layer</p><h2>Silver publication</h2></div><Status value={dataset?.lifecycle.silver_approved ? "approved" : dataset?.lifecycle.transformed ? "published" : "pending"} /></header>
-          <p className="body-copy">Approved mappings convert Bronze strings into governed ClickHouse types. Invalid rows remain available as bounded rejection evidence.</p>
+          <p className="body-copy">Approved mappings convert Bronze strings into governed Dataverse Silver rows. Invalid rows remain available as bounded rejection evidence.</p>
           <div className="action-row"><ActionButton disabled={Boolean(busy) || !dataset?.lifecycle.bronze_approved} onClick={() => run("Silver publication", () => client.runSilver(datasetKey))}>Build Silver</ActionButton><ActionButton tone="quiet" disabled={Boolean(busy) || !dataset?.lifecycle.transformed} onClick={() => run("Silver approval", () => client.approveLayer(datasetKey, "SILVER"))}>Approve Silver</ActionButton></div>
         </section>
-        {Object.entries(dataset?.silver || {}).map(([key, value]) => <section className="panel" key={key}><p className="eyebrow">{key}</p><h3>{value.table || "Silver table"}</h3><div className="metrics metrics-compact"><Metric label="Valid" value={String(value.valid_rows || 0)} /><Metric label="Rejected" value={String(value.rejected_rows || 0)} /></div></section>)}
+        {Object.entries(dataset?.silver || {}).map(([key, value]) => <section className="panel" key={key}><p className="eyebrow">{key}</p><h3>{value.entity_set || value.table || "dq_silverrows"}</h3><div className="metrics metrics-compact"><Metric label="Valid" value={String(value.valid_rows || 0)} /><Metric label="Rejected" value={String(value.rejected_rows || 0)} /></div></section>)}
         {!Object.keys(dataset?.silver || {}).length && <section className="panel"><Empty text="Approve Bronze and mappings, then build Silver." /></section>}
         <section className="panel"><p className="eyebrow">Bronze gate</p><h3>{dataset?.lifecycle.bronze_approved ? "Approved" : "Review required"}</h3><ActionButton tone="quiet" disabled={Boolean(busy) || !dataset?.lifecycle.profiled} onClick={() => run("Bronze approval", () => client.approveLayer(datasetKey, "BRONZE"))}>Approve Bronze</ActionButton></section>
       </div>}
@@ -156,7 +156,7 @@ export function App() {
           <div className="action-row"><ActionButton disabled={Boolean(busy) || !dataset?.lifecycle.silver_approved || !selectedAsset} onClick={() => run("Gold recipe", () => client.createGoldRecipe(datasetKey, selectedAsset!))}>Create recipe</ActionButton><ActionButton tone="quiet" disabled={Boolean(busy) || !latestRecipe || latestRecipe.status === "APPROVED"} onClick={() => run("Gold recipe approval", () => client.reviewGoldRecipe(datasetKey, latestRecipe!.recipe_id))}>Approve recipe</ActionButton><ActionButton tone="quiet" disabled={Boolean(busy) || latestRecipe?.status !== "APPROVED"} onClick={() => run("Gold publication", () => client.runGold(datasetKey, latestRecipe!.recipe_id))}>Publish Gold</ActionButton><ActionButton tone="quiet" disabled={Boolean(busy) || !dataset?.lifecycle.gold_published} onClick={() => run("Gold approval", () => client.approveLayer(datasetKey, "GOLD"))}>Approve Gold</ActionButton></div>
         </section>
         {recipes.map((recipe) => <section className="panel" key={recipe.recipe_id}><p className="eyebrow">Recipe v{recipe.version}</p><h3>{recipe.target_asset}</h3><p className="subtle">Source: {recipe.source_asset}</p><Status value={recipe.status} /></section>)}
-        <section className="panel"><p className="eyebrow">Published result</p><h3>{String(dataset?.gold?.table || "No Gold table")}</h3><div className="metrics metrics-compact"><Metric label="Rows" value={String(dataset?.gold?.row_count || 0)} /><Metric label="Reconcile" value={String(dataset?.gold?.reconciliation || "pending")} /></div></section>
+        <section className="panel"><p className="eyebrow">Published result</p><h3>{String(dataset?.gold?.entity_set || dataset?.gold?.table || "No Gold result")}</h3><div className="metrics metrics-compact"><Metric label="Rows" value={String(dataset?.gold?.row_count || 0)} /><Metric label="Reconcile" value={String(dataset?.gold?.reconciliation || "pending")} /></div></section>
       </div>}
 
       {tab === "Lineage" && <section className="panel">
@@ -165,7 +165,7 @@ export function App() {
         <div className="activity-list">{lineage?.activity.slice().reverse().map((event) => <article key={event.event_id}><div className="activity-mark" /><div><strong>{event.action.replaceAll("_", " ")}</strong><p>{event.detail || "Workflow state updated"}</p></div><div><Status value={event.status} /><time>{new Date(event.recorded_at).toLocaleString()}</time></div></article>)}</div>
       </section>}
     </main>
-    <footer><span>AI Data Quality / Generic Dataset Demo</span><span>SharePoint · Graph · Airflow · ClickHouse · Power Apps</span></footer>
+    <footer><span>AI Data Quality / Generic Dataset Demo</span><span>SharePoint · Power Automate · Dataverse · Power Apps</span></footer>
   </div>;
 }
 

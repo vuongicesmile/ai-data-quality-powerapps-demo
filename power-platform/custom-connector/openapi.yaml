@@ -1,0 +1,95 @@
+swagger: "2.0"
+info:
+  title: AI Data Quality Worker
+  description: Stateless bounded CSV profiling and transformation operations for Power Platform.
+  version: "1.0"
+host: REPLACE_WITH_WORKER_HOST
+basePath: /api/v1/datasets
+schemes: [https]
+consumes: [application/json]
+produces: [application/json]
+securityDefinitions:
+  oauth2:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+    tokenUrl: https://login.microsoftonline.com/common/oauth2/v2.0/token
+    scopes:
+      api://REPLACE_WITH_WORKER_APP_ID/access_as_user: Access AI Data Quality worker
+security:
+  - oauth2: [api://REPLACE_WITH_WORKER_APP_ID/access_as_user]
+parameters:
+  DatasetKey:
+    name: dataset_key
+    in: path
+    required: true
+    type: string
+paths:
+  /{dataset_key}/ingestion-runs:
+    post:
+      operationId: StartIngestion
+      summary: Snapshot SharePoint source into Bronze and create Dataverse metadata
+      parameters:
+        - $ref: "#/parameters/DatasetKey"
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              force: { type: boolean, default: false }
+              run_id: { type: string, description: Correlation ID created by DQ_StartIngestion }
+      responses:
+        "202": { description: Accepted ingestion result, schema: { type: object } }
+  /{dataset_key}/ingestion-runs/{run_id}:
+    get:
+      operationId: GetIngestionRun
+      parameters:
+        - $ref: "#/parameters/DatasetKey"
+        - { name: run_id, in: path, required: true, type: string }
+      responses:
+        "200": { description: Run status, schema: { type: object } }
+  /{dataset_key}/discover:
+    post:
+      operationId: DiscoverDataset
+      parameters: [{ $ref: "#/parameters/DatasetKey" }]
+      responses:
+        "200": { description: Discovered schemas, schema: { type: object } }
+  /{dataset_key}/profile:
+    post:
+      operationId: ProfileDataset
+      parameters: [{ $ref: "#/parameters/DatasetKey" }]
+      responses:
+        "200": { description: Profile results, schema: { type: object } }
+  /{dataset_key}/rules/execute:
+    post:
+      operationId: ExecuteApprovedRules
+      parameters: [{ $ref: "#/parameters/DatasetKey" }]
+      responses:
+        "200": { description: Rule results, schema: { type: object } }
+  /{dataset_key}/silver/run:
+    post:
+      operationId: PublishSilver
+      parameters: [{ $ref: "#/parameters/DatasetKey" }]
+      responses:
+        "200": { description: Silver publication, schema: { type: object } }
+  /{dataset_key}/gold/run:
+    post:
+      operationId: PublishGold
+      parameters:
+        - $ref: "#/parameters/DatasetKey"
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required: [recipe_id]
+            properties:
+              recipe_id: { type: string }
+      responses:
+        "200": { description: Gold publication, schema: { type: object } }
+x-ms-connector-metadata:
+  - propertyName: Website
+    propertyValue: https://github.com/vuongicesmile/ai-data-quality-powerapps-demo
+  - propertyName: Privacy policy
+    propertyValue: https://github.com/vuongicesmile/ai-data-quality-powerapps-demo

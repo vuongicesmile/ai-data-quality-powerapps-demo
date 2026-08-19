@@ -1,8 +1,9 @@
-name: ai-data-quality-demo
+name: ai-data-quality-power-platform
 
-x-platform-environment: &platform-environment
+x-power-platform-environment: &power-platform-environment
+  APP_ENV: ${APP_ENV:-development}
   DATASET_KEY: ${DATASET_KEY:-ecommerce-v1}
-  DATA_SOURCE_PROVIDER: ${DATA_SOURCE_PROVIDER:-local}
+  DATA_SOURCE_PROVIDER: ${DATA_SOURCE_PROVIDER:-sharepoint}
   LOCAL_DATASET_PATH: /app/sample-data/ecommerce-v1
   AZURE_TENANT_ID: ${AZURE_TENANT_ID:-}
   AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
@@ -11,142 +12,22 @@ x-platform-environment: &platform-environment
   SHAREPOINT_SITE_PATH: ${SHAREPOINT_SITE_PATH:-/sites/AIDataQualityDev}
   SHAREPOINT_LIBRARY: ${SHAREPOINT_LIBRARY:-DataQualityDatasets}
   SHAREPOINT_DATASET_FOLDER: ${SHAREPOINT_DATASET_FOLDER:-GenericDatasets/ecommerce-v1}
-  BRONZE_S3_ENDPOINT: http://seaweedfs:8333
-  BRONZE_S3_BUCKET: bronze
-  BRONZE_S3_ACCESS_KEY: seaweed
-  BRONZE_S3_SECRET_KEY: seaweed
-  BRONZE_PREFIX: sharepoint/GenericDatasets/ecommerce-v1
-  CLICKHOUSE_URL: http://clickhouse:8123
-  CLICKHOUSE_USER: default
-  CLICKHOUSE_PASSWORD: ""
-  AIRFLOW_API_URL: http://airflow:8080/api/v1
-  AIRFLOW_USERNAME: admin
-  AIRFLOW_PASSWORD: admin
-  AIRFLOW_DAG_ID: sharepoint_generic_dataset_bronze_ingestion
+  SHAREPOINT_BRONZE_LIBRARY: ${SHAREPOINT_BRONZE_LIBRARY:-DataQualityBronze}
+  SHAREPOINT_BRONZE_PREFIX: ${SHAREPOINT_BRONZE_PREFIX:-GenericDatasets}
+  SOURCE_MAX_FILES: ${SOURCE_MAX_FILES:-100}
+  SOURCE_MAX_FILE_BYTES: ${SOURCE_MAX_FILE_BYTES:-26214400}
+  SOURCE_MAX_ROWS: ${SOURCE_MAX_ROWS:-5000}
+  MAXIMUM_EVIDENCE_ROWS: ${MAXIMUM_EVIDENCE_ROWS:-100}
+  DATAVERSE_URL: ${DATAVERSE_URL:-}
+  DATAVERSE_API_VERSION: ${DATAVERSE_API_VERSION:-v9.2}
 
 services:
-  clickhouse:
-    image: clickhouse/clickhouse-server:24.8
-    environment:
-      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
-    ports:
-      - "8123:8123"
-    volumes:
-      - clickhouse-data:/var/lib/clickhouse
-      - ./infrastructure/clickhouse/init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
-  seaweedfs:
-    image: chrislusf/seaweedfs:3.80
-    command: server -s3 -dir=/data -ip=seaweedfs
-    ports:
-      - "8333:8333"
-      - "9333:9333"
-    volumes:
-      - seaweed-data:/data
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:9333/cluster/status"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U airflow"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-
-  airflow-init:
-    image: apache/airflow:2.10.5-python3.11
-    user: "0:0"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      _PIP_ADDITIONAL_REQUIREMENTS: boto3 pydantic-settings
-    command:
-      - bash
-      - -c
-      - airflow db migrate && airflow users create --username admin --password admin --firstname Demo --lastname Admin --role Admin --email admin@example.com || true
-
-  airflow:
-    image: apache/airflow:2.10.5-python3.11
-    depends_on:
-      airflow-init:
-        condition: service_completed_successfully
-      seaweedfs:
-        condition: service_healthy
-    environment:
-      <<: *platform-environment
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth
-      _PIP_ADDITIONAL_REQUIREMENTS: boto3 pydantic-settings
-      PYTHONPATH: /app/packages/data-quality-core/src
-    command: airflow webserver
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./orchestration/airflow/dags:/opt/airflow/dags:ro
-      - ./packages:/app/packages:ro
-      - ./sample-data:/app/sample-data:ro
-      - airflow-logs:/opt/airflow/logs
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-
-  airflow-scheduler:
-    image: apache/airflow:2.10.5-python3.11
-    depends_on:
-      airflow-init:
-        condition: service_completed_successfully
-      seaweedfs:
-        condition: service_healthy
-    environment:
-      <<: *platform-environment
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      _PIP_ADDITIONAL_REQUIREMENTS: boto3 pydantic-settings
-      PYTHONPATH: /app/packages/data-quality-core/src
-    command: airflow scheduler
-    volumes:
-      - ./orchestration/airflow/dags:/opt/airflow/dags:ro
-      - ./packages:/app/packages:ro
-      - ./sample-data:/app/sample-data:ro
-      - airflow-logs:/opt/airflow/logs
-
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    depends_on:
-      clickhouse:
-        condition: service_healthy
-      seaweedfs:
-        condition: service_healthy
-      airflow:
-        condition: service_healthy
     environment:
-      <<: *platform-environment
-      ORCHESTRATION_MODE: ${ORCHESTRATION_MODE:-local}
+      <<: *power-platform-environment
     ports:
       - "8000:8000"
     healthcheck:
@@ -165,9 +46,3 @@ services:
       VITE_API_BASE_URL: http://localhost:8000
     ports:
       - "4173:4173"
-
-volumes:
-  airflow-logs:
-  clickhouse-data:
-  postgres-data:
-  seaweed-data:

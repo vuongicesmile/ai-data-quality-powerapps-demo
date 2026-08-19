@@ -1,4 +1,4 @@
-"""Source-to-Bronze application use case shared by API and Airflow."""
+"""SharePoint source-to-Bronze use case invoked by the Power Automate worker API."""
 
 from __future__ import annotations
 

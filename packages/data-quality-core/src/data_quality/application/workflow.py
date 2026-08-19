@@ -188,7 +188,7 @@ class GenericDatasetWorkflow:
 
     def run_rules(self, dataset_key: str) -> dict[str, Any]:
         with self.lock:
-            state = self._state(dataset_key)
+            state = self._state(dataset_key, hydrate_rows=True)
             for asset_key, rows in state.rows.items():
                 state.rule_results[asset_key] = execute_rules(
                     asset_key, rows, state.rules.get(asset_key, [])
@@ -305,7 +305,7 @@ class GenericDatasetWorkflow:
 
     def transform(self, dataset_key: str) -> dict[str, Any]:
         with self.lock:
-            state = self._state(dataset_key)
+            state = self._state(dataset_key, hydrate_rows=True)
             if not state.lifecycle["bronze_approved"]:
                 raise ConflictError("Bronze must be approved before Silver transformation")
             if any(mapping.status != "APPROVED" for mapping in state.mappings.values()):
@@ -316,10 +316,11 @@ class GenericDatasetWorkflow:
                 mapping = state.mappings[asset_key]
                 valid, rejected = self._transform_rows(rows, mapping)
                 publication = self.warehouse.publish_silver(
-                    dataset_id=state.dataset_id,
+                    dataset_id=state.dataset_key,
                     asset_key=asset_key,
                     mapping=mapping.model_dump(),
                     rows=valid,
+                    rejected_rows=rejected,
                     batch_id=batch_id,
                 )
                 outputs[asset_key] = {
@@ -382,7 +383,7 @@ class GenericDatasetWorkflow:
             if not recipe or recipe.status != "APPROVED":
                 raise ConflictError("An approved Gold recipe is required")
             result = self.warehouse.publish_gold(
-                dataset_id=state.dataset_id,
+                dataset_id=state.dataset_key,
                 recipe=recipe.model_dump(),
                 silver=state.silver,
                 batch_id=str(state.bronze_manifest["batch_id"]),
@@ -443,11 +444,18 @@ class GenericDatasetWorkflow:
     def get_gold(self, dataset_key: str) -> dict[str, Any]:
         return {"gold": self._state(dataset_key).gold}
 
-    def _state(self, dataset_key: str) -> WorkflowState:
-        return self.states.load(dataset_key) or WorkflowState(dataset_key=dataset_key)
+    def _state(self, dataset_key: str, *, hydrate_rows: bool = False) -> WorkflowState:
+        state = self.states.load(dataset_key) or WorkflowState(dataset_key=dataset_key)
+        if hydrate_rows and state.assets and not state.rows:
+            for asset_key, asset in state.assets.items():
+                content = self.bronze.read_asset(asset)
+                state.rows[asset_key] = list(
+                    csv.DictReader(io.StringIO(content.decode("utf-8-sig")))
+                )
+        return state
 
     def _require_ingested(self, dataset_key: str) -> WorkflowState:
-        state = self._state(dataset_key)
+        state = self._state(dataset_key, hydrate_rows=True)
         if not state.lifecycle["ingested"]:
             raise ConflictError("Sync a Bronze batch before running this operation")
         return state
@@ -489,7 +497,7 @@ class GenericDatasetWorkflow:
             asset_key=asset_key,
             columns=columns,
             business_key=identifiers[:1],
-            target_table=f"generic_dataset_demo_silver.{asset_key}",
+            target_table=f"dq_silverrow:{asset_key}",
         )
 
     @classmethod

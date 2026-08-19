@@ -1,0 +1,25 @@
+solution:
+  uniqueName: AIDataQualityPowerAppsDemo
+  publisherPrefix: dq
+  components:
+    dataverseSchema: ../dataverse/schema.yaml
+    codeApp: ../../apps/power-app
+    customConnector: ../custom-connector/openapi.yaml
+    flows:
+      - ../flows/DQ_StartIngestion.contract.json
+  environmentVariables:
+    dq_SharePointHost: { type: Text, required: true }
+    dq_SourceSitePath: { type: Text, default: /sites/AIDataQualityDev }
+    dq_SourceLibrary: { type: Text, default: DataQualityDatasets }
+    dq_SourceFolder: { type: Text, default: GenericDatasets/ecommerce-v1 }
+    dq_BronzeLibrary: { type: Text, default: DataQualityBronze }
+    dq_BronzeRoot: { type: Text, default: GenericDatasets }
+    dq_WorkerBaseUrl: { type: Text, required: true }
+    dq_MaxFiles: { type: Number, default: 100 }
+    dq_MaxFileBytes: { type: Number, default: 26214400 }
+    dq_MaxRowsPerFile: { type: Number, default: 5000 }
+    dq_MaxEvidenceRows: { type: Number, default: 100 }
+  connectionReferences:
+    dq_SharePointConnection: shared_sharepointonline
+    dq_DataverseConnection: shared_commondataserviceforapps
+    dq_WorkerConnectorConnection: dq_aiDataQualityWorker

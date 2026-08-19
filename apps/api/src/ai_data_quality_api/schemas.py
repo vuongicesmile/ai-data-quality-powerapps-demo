@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 class IngestionCommand(BaseModel):
     force: bool = False
+    run_id: str | None = None
 
 
 class AssetSelectionCommand(BaseModel):

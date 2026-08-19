@@ -62,10 +62,79 @@ class MicrosoftGraphClient:
 
     def list_folder_children(self, drive_id: str, folder_path: str) -> list[dict[str, Any]]:
         folder = quote(folder_path.strip("/"), safe="/")
+        path = (
+            f"/drives/{quote(drive_id, safe='')}/root:/{folder}:/children"
+            if folder
+            else f"/drives/{quote(drive_id, safe='')}/root/children"
+        )
         return self._collection(
-            f"/drives/{quote(drive_id, safe='')}/root:/{folder}:/children",
+            path,
+            params={"$select": "id,name,size,eTag,lastModifiedDateTime,file,folder,webUrl"},
+        )
+
+    def ensure_folder(self, drive_id: str, folder_path: str) -> dict[str, Any]:
+        parent = ""
+        current: dict[str, Any] = {"id": "root", "name": "root"}
+        for segment in (part for part in folder_path.strip("/").split("/") if part):
+            children = self.list_folder_children(drive_id, parent)
+            existing = next(
+                (
+                    item for item in children
+                    if str(item.get("name", "")).casefold() == segment.casefold()
+                    and isinstance(item.get("folder"), dict)
+                ),
+                None,
+            )
+            if existing is None:
+                encoded_drive = quote(drive_id, safe="")
+                encoded_parent = quote(parent, safe="/")
+                endpoint = (
+                    f"/drives/{encoded_drive}/root:/{encoded_parent}:/children"
+                    if parent else f"/drives/{encoded_drive}/root/children"
+                )
+                existing = self._json(
+                    endpoint,
+                    method="POST",
+                    json_body={
+                        "name": segment,
+                        "folder": {},
+                        "@microsoft.graph.conflictBehavior": "fail",
+                    },
+                )
+            current = existing
+            parent = f"{parent}/{segment}".strip("/")
+        return current
+
+    def upload_drive_item(
+        self, drive_id: str, item_path: str, content: bytes, *, content_type: str
+    ) -> dict[str, Any]:
+        if len(content) > self.maximum_download_bytes:
+            raise BudgetExceededError("SharePoint upload exceeds the configured byte limit")
+        path = quote(item_path.strip("/"), safe="/")
+        response = self._request(
+            f"/drives/{quote(drive_id, safe='')}/root:/{path}:/content",
+            method="PUT", data=content, headers={"Content-Type": content_type},
+        )
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise UpstreamUnavailableError("Microsoft Graph returned invalid upload metadata") from exc
+        finally:
+            response.close()
+        if not isinstance(payload, dict):
+            raise UpstreamUnavailableError("Microsoft Graph returned invalid upload metadata")
+        return payload
+
+    def get_drive_item_by_path(self, drive_id: str, item_path: str) -> dict[str, Any]:
+        path = quote(item_path.strip("/"), safe="/")
+        return self._json(
+            f"/drives/{quote(drive_id, safe='')}/root:/{path}",
             params={"$select": "id,name,size,eTag,lastModifiedDateTime,file,webUrl"},
         )
+
+    def download_drive_item_by_path(self, drive_id: str, item_path: str) -> bytes:
+        item = self.get_drive_item_by_path(drive_id, item_path)
+        return self.download_drive_item(drive_id, str(item["id"]))
 
     def download_drive_item(self, drive_id: str, item_id: str) -> bytes:
         response = self._request(
@@ -104,8 +173,11 @@ class MicrosoftGraphClient:
             current_params = None
         return items
 
-    def _json(self, path: str, *, params: dict[str, str] | None = None) -> dict[str, Any]:
-        response = self._request(path, params=params)
+    def _json(
+        self, path: str, *, params: dict[str, str] | None = None,
+        method: str = "GET", json_body: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        response = self._request(path, params=params, method=method, json_body=json_body)
         try:
             payload = response.json()
         except ValueError as exc:
@@ -120,16 +192,23 @@ class MicrosoftGraphClient:
         self,
         path: str,
         *,
+        method: str = "GET",
         params: dict[str, str] | None = None,
         stream: bool = False,
+        json_body: dict[str, Any] | None = None,
+        data: bytes | None = None,
+        headers: dict[str, str] | None = None,
     ) -> requests.Response:
         url = path if path.startswith("https://") else self.base_url + path
         for attempt in range(self.max_retries + 1):
             try:
-                response = self.session.get(
+                response = self.session.request(
+                    method,
                     url,
                     params=params,
-                    headers={"Authorization": f"Bearer {self.auth.access_token()}"},
+                    headers={"Authorization": f"Bearer {self.auth.access_token()}", **(headers or {})},
+                    json=json_body,
+                    data=data,
                     timeout=self.timeout_seconds,
                     allow_redirects=True,
                     stream=stream,

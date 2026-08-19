@@ -6,11 +6,9 @@ from typing import Annotated, Any
 
 from data_quality.application import GenericDatasetWorkflow, IngestionService
 from data_quality.config import Settings
-from data_quality.integrations.airflow import AirflowClient
 from fastapi import APIRouter, Depends, Query, status
 
 from .dependencies import (
-    get_airflow,
     get_ingestion_service,
     get_workflow,
     settings_dependency,
@@ -30,7 +28,6 @@ from .schemas import (
 router = APIRouter(prefix="/api/v1/datasets", tags=["datasets"])
 WorkflowDep = Annotated[GenericDatasetWorkflow, Depends(get_workflow)]
 IngestionDep = Annotated[IngestionService, Depends(get_ingestion_service)]
-AirflowDep = Annotated[AirflowClient, Depends(get_airflow)]
 SettingsDep = Annotated[Settings, Depends(settings_dependency)]
 
 
@@ -50,22 +47,19 @@ def start_ingestion(
     command: IngestionCommand,
     workflow: WorkflowDep,
     ingestion: IngestionDep,
-    airflow: AirflowDep,
     settings: SettingsDep,
 ) -> dict[str, Any]:
-    if settings.orchestration_mode == "local":
-        manifest = ingestion.run(dataset_key, force=command.force)
-        result = workflow.sync_from_bronze(dataset_key)
-        return {
-            "run_id": manifest["batch_id"],
-            "status": "SUCCESS",
-            "progress": 100,
-            "manifest": manifest,
-            "dataset": result["dataset"],
-        }
-    run = airflow.trigger(
-        settings.airflow_dag_id, conf={"dataset_key": dataset_key, "force": command.force}
-    )
+    del settings
+    manifest = ingestion.run(dataset_key, force=command.force)
+    result = workflow.sync_from_bronze(dataset_key)
+    run_id = command.run_id or str(manifest["batch_id"])
+    run = {
+        "run_id": run_id,
+        "status": "SUCCESS",
+        "progress": 100,
+        "manifest": manifest,
+        "dataset": result["dataset"],
+    }
     workflow.set_ingestion(dataset_key, run)
     return run
 
@@ -75,16 +69,9 @@ def ingestion_status(
     dataset_key: str,
     run_id: str,
     workflow: WorkflowDep,
-    airflow: AirflowDep,
-    settings: SettingsDep,
 ) -> dict[str, Any]:
-    if settings.orchestration_mode == "local":
-        return workflow.overview(dataset_key)["ingestion"]
-    result = airflow.status(settings.airflow_dag_id, run_id)
-    workflow.set_ingestion(dataset_key, result)
-    if result["status"] == "SUCCESS":
-        workflow.sync_from_bronze(dataset_key)
-    return result
+    result = workflow.overview(dataset_key)["ingestion"]
+    return {**result, "requested_run_id": run_id}
 
 
 @router.post("/{dataset_key}/sync")

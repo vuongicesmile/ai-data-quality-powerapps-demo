@@ -5,8 +5,10 @@
 This document replaces the earlier transitional architecture that retained
 Airflow, SeaweedFS, and ClickHouse.
 
-Current repository code still uses those components. This document is a plan
-only; it does not claim that the Dataverse refactor has been implemented.
+Repository composition now uses Dataverse, SharePoint Bronze, Power Automate
+contracts, and generated-service bindings. Tenant-owned solution components
+still require creation/binding in the selected Power Platform environment.
+Legacy adapters are disconnected and retained only until tenant parity passes.
 
 Target repository:
 
@@ -194,13 +196,12 @@ policy before implementation.
 
 # Phase 0 — Branch and Recovery Point
 
-Status: not started.
+Status: implemented on `feat/sharepoint-powerapps-platform`.
 
-Create the implementation branch only after explicit approval:
+Implementation branch:
 
 ```bash
 git switch feat/sharepoint-powerapps-platform
-git switch -c refactor/power-platform-native
 ```
 
 Recovery point:
@@ -215,7 +216,7 @@ The transitional branch remains available until tenant parity passes.
 
 # Phase 1 — Create the Power Platform Solution
 
-Status: tenant action pending.
+Status: solution manifest implemented; tenant creation pending.
 
 Create an unmanaged development solution:
 
@@ -243,7 +244,7 @@ implicitly.
 
 # Phase 2 — Dataverse Schema
 
-Status: planned, not implemented.
+Status: schema manifest implemented; tenant table creation pending.
 
 ## Step 2.1 — Core lifecycle tables
 
@@ -381,7 +382,7 @@ dataset lifecycle, rule review, mapping, recipe, approval, and status columns.
 
 # Phase 3 — SharePoint Source and Bronze
 
-Status: planned, not implemented.
+Status: SharePoint Bronze adapter implemented; tenant proof pending.
 
 Source library:
 
@@ -425,7 +426,7 @@ Bronze snapshot. No Graph credential may appear in Power Apps.
 
 # Phase 4 — Dataverse Backend Boundary
 
-Status: planned, not implemented.
+Status: Dataverse OAuth/OData and normalized repositories implemented; tenant proof pending.
 
 Create infrastructure boundaries:
 
@@ -462,7 +463,7 @@ or depend on ClickHouse/S3/Airflow after cutover.
 
 # Phase 5 — Power Automate Orchestration
 
-Status: tenant action and implementation pending.
+Status: Flow contract and connector operation implemented; tenant Flow creation pending.
 
 Create a solution-aware instant flow:
 
@@ -502,7 +503,7 @@ These optional flows must not block the core demo.
 
 # Phase 6 — Power Apps Code App
 
-Status: planned, tenant binding pending.
+Status: generated-service gateway implemented; tenant data-source generation/binding pending.
 
 Add Dataverse tables using the npm Power Apps CLI so it generates typed model
 and service files. Add `DQ_StartIngestion` with the Code Apps Flow command.
@@ -536,7 +537,7 @@ services are bound.
 
 # Phase 7 — Security, Roles, and ALM
 
-Status: planned.
+Status: solution variables/roles declared; tenant provisioning pending.
 
 Create roles:
 
@@ -573,7 +574,7 @@ not hard-coded connection IDs.
 
 # Phase 8 — Code Refactor Sequence
 
-Status: do not start without explicit implementation instruction.
+Status: repository refactor implemented; legacy deletion deferred until tenant acceptance.
 
 Safe sequence:
 
@@ -626,7 +627,7 @@ The migration is complete only when a real environment proves:
 Until all tenant checkpoints pass:
 
 1. Keep commit `adff09e` and the transitional branch intact.
-2. Make Dataverse work on `refactor/power-platform-native`.
+2. Keep Dataverse work on `feat/sharepoint-powerapps-platform`.
 3. Do not delete SharePoint source or Bronze history.
 4. Do not remove old adapters before the replacement path is proven.
 5. If Dataverse cannot meet the agreed demo limits, stop and create a separate

@@ -40,6 +40,7 @@ class WarehouseRepository(Protocol):
         asset_key: str,
         mapping: dict[str, Any],
         rows: list[dict[str, Any]],
+        rejected_rows: list[dict[str, Any]],
         batch_id: str,
     ) -> dict[str, Any]: ...
 

@@ -76,6 +76,7 @@ export interface Approval {
 
 export interface SilverResult {
   table?: string;
+  entity_set?: string;
   row_count?: number;
   valid_rows?: number;
   rejected_rows?: number;

@@ -26,6 +26,9 @@ class SourceAsset(BaseModel):
 class BronzeAsset(SourceAsset):
     bronze_key: str
     content_hash: str
+    bronze_item_id: str = ""
+    bronze_etag: str = ""
+    bronze_web_url: str = ""
     row_count: int = Field(default=0, ge=0)
     columns: list[str] = Field(default_factory=list)
 
@@ -55,6 +58,7 @@ class RuleDefinition(BaseModel):
     source: Literal["DETERMINISTIC", "LLM"] = "DETERMINISTIC"
     reviewed_by: str | None = None
     reviewed_at: str | None = None
+    etag: str | None = Field(default=None, exclude=True)
 
 
 class RuleResult(BaseModel):
@@ -81,6 +85,7 @@ class AssetMapping(BaseModel):
     target_table: str
     approved_by: str | None = None
     approved_at: str | None = None
+    etag: str | None = Field(default=None, exclude=True)
 
 
 class ApprovalEvent(BaseModel):
@@ -90,6 +95,7 @@ class ApprovalEvent(BaseModel):
     actor: str
     reason: str = ""
     recorded_at: str = Field(default_factory=utc_now)
+    etag: str | None = Field(default=None, exclude=True)
 
 
 class GoldRecipe(BaseModel):
@@ -105,6 +111,7 @@ class GoldRecipe(BaseModel):
     actor: str
     reviewed_by: str | None = None
     reviewed_at: str | None = None
+    etag: str | None = Field(default=None, exclude=True)
 
 
 class ActivityEvent(BaseModel):

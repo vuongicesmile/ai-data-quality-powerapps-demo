@@ -1,0 +1,259 @@
+solution:
+  displayName: AI Data Quality Power Apps Demo
+  uniqueName: AIDataQualityPowerAppsDemo
+  publisherPrefix: dq
+  version: 1.0.0.0
+
+choices:
+  dq_lifecyclestatus:
+    EMPTY: 100000000
+    INGESTED: 100000001
+    DISCOVERED: 100000002
+    PROFILED: 100000003
+    SILVER_PUBLISHED: 100000004
+    GOLD_PUBLISHED: 100000005
+  dq_runstatus: { QUEUED: 100000000, RUNNING: 100000001, SUCCESS: 100000002, FAILED: 100000003 }
+  dq_reviewstatus: { PENDING: 100000000, PROPOSED: 100000001, APPROVED: 100000002, REJECTED: 100000003 }
+  dq_approvallayer: { BRONZE: 100000000, SILVER: 100000001, GOLD: 100000002 }
+  dq_resultstatus: { PASS: 100000000, FAIL: 100000001 }
+
+tables:
+  dq_dataset:
+    entitySetName: dq_datasets
+    primaryName: dq_name
+    auditing: true
+    alternateKeys: [[dq_datasetkey]]
+    columns:
+      dq_datasetkey: { type: Text, maxLength: 200, required: true }
+      dq_status: { type: Choice, choice: dq_lifecyclestatus, required: true }
+      dq_selectedassetkey: { type: Text, maxLength: 200 }
+      dq_currentstep: { type: Text, maxLength: 100 }
+      dq_progress: { type: WholeNumber, min: 0, max: 100 }
+      dq_revision: { type: WholeNumber, min: 0 }
+      dq_sourceprovider: { type: Text, maxLength: 50 }
+      dq_manifestjson: { type: MultilineText, maxLength: 1048576 }
+      dq_qualityjson: { type: MultilineText, maxLength: 1048576 }
+      dq_silverjson: { type: MultilineText, maxLength: 1048576 }
+      dq_goldjson: { type: MultilineText, maxLength: 1048576 }
+      dq_ingested: { type: YesNo }
+      dq_discovered: { type: YesNo }
+      dq_profiled: { type: YesNo }
+      dq_bronzeapproved: { type: YesNo }
+      dq_transformed: { type: YesNo }
+      dq_silverapproved: { type: YesNo }
+      dq_goldpublished: { type: YesNo }
+      dq_goldapproved: { type: YesNo }
+      dq_updatedat: { type: DateTime }
+  dq_ingestionrun:
+    entitySetName: dq_ingestionruns
+    primaryName: dq_name
+    alternateKeys: [[dq_name]]
+    columns:
+      dq_datasetkey: { type: Text, maxLength: 200, required: true }
+      dq_status: { type: Choice, choice: dq_runstatus, required: true }
+      dq_progress: { type: WholeNumber, min: 0, max: 100 }
+      dq_force: { type: YesNo }
+      dq_startedat: { type: DateTime }
+      dq_completedat: { type: DateTime }
+      dq_errortype: { type: Text, maxLength: 200 }
+      dq_errormessage: { type: MultilineText, maxLength: 10000 }
+  dq_batch:
+    entitySetName: dq_batches
+    primaryName: dq_name
+    alternateKeys: [[dq_name]]
+    columns:
+      dq_datasetkey: { type: Text, maxLength: 200, required: true }
+      dq_sourceversionhash: { type: Text, maxLength: 128 }
+      dq_manifesturl: { type: Url }
+      dq_manifestitemid: { type: Text, maxLength: 500 }
+      dq_manifestetag: { type: Text, maxLength: 500 }
+      dq_publishedat: { type: DateTime }
+      dq_status: { type: Choice, choice: dq_runstatus }
+  dq_asset:
+    entitySetName: dq_assets
+    primaryName: dq_name
+    alternateKeys: [[dq_batchkey, dq_assetkey]]
+    columns:
+      dq_batchkey: { type: Text, maxLength: 200, required: true }
+      dq_assetkey: { type: Text, maxLength: 200, required: true }
+      dq_filename: { type: Text, maxLength: 500 }
+      dq_sourceitemid: { type: Text, maxLength: 500 }
+      dq_sourceetag: { type: Text, maxLength: 500 }
+      dq_sourcepath: { type: Text, maxLength: 2000 }
+      dq_rowcount: { type: WholeNumber, min: 0 }
+      dq_columncount: { type: WholeNumber, min: 0 }
+      dq_contenthash: { type: Text, maxLength: 128 }
+      dq_columnsjson: { type: MultilineText, maxLength: 100000 }
+  dq_bronzesnapshot:
+    entitySetName: dq_bronzesnapshots
+    primaryName: dq_name
+    alternateKeys: [[dq_batchkey, dq_assetkey]]
+    columns:
+      dq_batchkey: { type: Text, maxLength: 200, required: true }
+      dq_assetkey: { type: Text, maxLength: 200, required: true }
+      dq_driveitemid: { type: Text, maxLength: 500 }
+      dq_etag: { type: Text, maxLength: 500 }
+      dq_weburl: { type: Url }
+      dq_contenthash: { type: Text, maxLength: 128 }
+      dq_sizebytes: { type: WholeNumber, min: 0 }
+      dq_immutablepath: { type: Text, maxLength: 2000 }
+  dq_columnprofile:
+    entitySetName: dq_columnprofiles
+    primaryName: dq_name
+    alternateKeys: [[dq_batchkey, dq_assetkey, dq_columnname]]
+    columns:
+      dq_datasetkey: { type: Text, maxLength: 200 }
+      dq_batchkey: { type: Text, maxLength: 200, required: true }
+      dq_assetkey: { type: Text, maxLength: 200, required: true }
+      dq_columnname: { type: Text, maxLength: 200, required: true }
+      dq_physicaltype: { type: Text, maxLength: 50 }
+      dq_semantictype: { type: Text, maxLength: 50 }
+      dq_rowcount: { type: WholeNumber, min: 0 }
+      dq_nullcount: { type: WholeNumber, min: 0 }
+      dq_nullpercentage: { type: Decimal, precision: 5 }
+      dq_distinctcount: { type: WholeNumber, min: 0 }
+      dq_duplicatecount: { type: WholeNumber, min: 0 }
+      dq_minvalue: { type: Text, maxLength: 2000 }
+      dq_maxvalue: { type: Text, maxLength: 2000 }
+      dq_samplesjson: { type: MultilineText, maxLength: 100000 }
+  dq_rule:
+    entitySetName: dq_rules
+    primaryName: dq_name
+    auditing: true
+    alternateKeys: [[dq_rulekey]]
+    columns:
+      dq_rulekey: { type: Text, maxLength: 200, required: true }
+      dq_datasetkey: { type: Text, maxLength: 200 }
+      dq_batchkey: { type: Text, maxLength: 200 }
+      dq_assetkey: { type: Text, maxLength: 200 }
+      dq_columnname: { type: Text, maxLength: 200 }
+      dq_ruletype: { type: Text, maxLength: 100 }
+      dq_description: { type: MultilineText, maxLength: 10000 }
+      dq_parametersjson: { type: MultilineText, maxLength: 100000 }
+      dq_status: { type: Choice, choice: dq_reviewstatus }
+      dq_source: { type: Text, maxLength: 50 }
+      dq_reviewedby: { type: Text, maxLength: 320 }
+      dq_reviewedat: { type: DateTime }
+  dq_ruleresult:
+    entitySetName: dq_ruleresults
+    primaryName: dq_name
+    alternateKeys: [[dq_batchkey, dq_rulekey]]
+    columns:
+      dq_batchkey: { type: Text, maxLength: 200, required: true }
+      dq_rulekey: { type: Text, maxLength: 200, required: true }
+      dq_assetkey: { type: Text, maxLength: 200 }
+      dq_status: { type: Choice, choice: dq_resultstatus }
+      dq_violationcount: { type: WholeNumber, min: 0 }
+  dq_evidence:
+    entitySetName: dq_evidences
+    primaryName: dq_name
+    alternateKeys: [[dq_batchkey, dq_rulekey, dq_evidencekey]]
+    columns:
+      dq_batchkey: { type: Text, maxLength: 200, required: true }
+      dq_rulekey: { type: Text, maxLength: 200, required: true }
+      dq_evidencekey: { type: Text, maxLength: 200, required: true }
+      dq_assetkey: { type: Text, maxLength: 200 }
+      dq_sourcerownumber: { type: WholeNumber, min: 0 }
+      dq_maskedvalue: { type: MultilineText, maxLength: 10000 }
+      dq_detailjson: { type: MultilineText, maxLength: 100000 }
+  dq_mapping:
+    entitySetName: dq_mappings
+    primaryName: dq_name
+    auditing: true
+    alternateKeys: [[dq_datasetkey, dq_assetkey, dq_version]]
+    columns:
+      dq_datasetkey: { type: Text, maxLength: 200, required: true }
+      dq_assetkey: { type: Text, maxLength: 200, required: true }
+      dq_version: { type: WholeNumber, min: 1, required: true }
+      dq_status: { type: Choice, choice: dq_reviewstatus }
+      dq_mappingjson: { type: MultilineText, maxLength: 1048576 }
+      dq_approvedby: { type: Text, maxLength: 320 }
+      dq_approvedat: { type: DateTime }
+  dq_approval:
+    entitySetName: dq_approvals
+    primaryName: dq_name
+    auditing: true
+    alternateKeys: [[dq_approvalkey]]
+    columns:
+      dq_approvalkey: { type: Text, maxLength: 200, required: true }
+      dq_datasetkey: { type: Text, maxLength: 200 }
+      dq_batchkey: { type: Text, maxLength: 200 }
+      dq_layer: { type: Choice, choice: dq_approvallayer }
+      dq_decision: { type: Choice, choice: dq_reviewstatus }
+      dq_actor: { type: Text, maxLength: 320 }
+      dq_reason: { type: MultilineText, maxLength: 10000 }
+      dq_recordedat: { type: DateTime }
+  dq_silverrow:
+    entitySetName: dq_silverrows
+    primaryName: dq_name
+    alternateKeys: [[dq_batchkey, dq_assetkey, dq_rowhash]]
+    columns:
+      dq_datasetkey: { type: Text, maxLength: 200 }
+      dq_batchkey: { type: Text, maxLength: 200, required: true }
+      dq_assetkey: { type: Text, maxLength: 200, required: true }
+      dq_sourcerownumber: { type: WholeNumber, min: 1 }
+      dq_rowhash: { type: Text, maxLength: 128, required: true }
+      dq_validationstatus: { type: Choice, choice: dq_resultstatus }
+      dq_payloadjson: { type: MultilineText, maxLength: 1048576 }
+      dq_rejectionjson: { type: MultilineText, maxLength: 100000 }
+  dq_goldrecipe:
+    entitySetName: dq_goldrecipes
+    primaryName: dq_name
+    auditing: true
+    alternateKeys: [[dq_datasetkey, dq_recipekey, dq_version]]
+    columns:
+      dq_datasetkey: { type: Text, maxLength: 200, required: true }
+      dq_recipekey: { type: Text, maxLength: 200, required: true }
+      dq_version: { type: WholeNumber, min: 1, required: true }
+      dq_status: { type: Choice, choice: dq_reviewstatus }
+      dq_recipejson: { type: MultilineText, maxLength: 1048576 }
+      dq_reviewedby: { type: Text, maxLength: 320 }
+      dq_reviewedat: { type: DateTime }
+  dq_goldresult:
+    entitySetName: dq_goldresults
+    primaryName: dq_name
+    alternateKeys: [[dq_batchkey, dq_recipekey, dq_rowhash]]
+    columns:
+      dq_datasetkey: { type: Text, maxLength: 200 }
+      dq_batchkey: { type: Text, maxLength: 200, required: true }
+      dq_recipekey: { type: Text, maxLength: 200, required: true }
+      dq_recipeversion: { type: WholeNumber, min: 1 }
+      dq_rowhash: { type: Text, maxLength: 128, required: true }
+      dq_dimensionsjson: { type: MultilineText, maxLength: 1048576 }
+      dq_measuresjson: { type: MultilineText, maxLength: 1048576 }
+      dq_reconciliationstatus: { type: Choice, choice: dq_resultstatus }
+  dq_activity:
+    entitySetName: dq_activities
+    primaryName: dq_name
+    alternateKeys: [[dq_activitykey]]
+    columns:
+      dq_activitykey: { type: Text, maxLength: 200, required: true }
+      dq_datasetkey: { type: Text, maxLength: 200 }
+      dq_action: { type: Text, maxLength: 100 }
+      dq_status: { type: Text, maxLength: 50 }
+      dq_actor: { type: Text, maxLength: 320 }
+      dq_detail: { type: MultilineText, maxLength: 10000 }
+      dq_recordedat: { type: DateTime }
+
+relationships:
+  - { name: dq_dataset_ingestionruns, parent: dq_dataset, child: dq_ingestionrun, lookup: dq_dataset }
+  - { name: dq_dataset_batches, parent: dq_dataset, child: dq_batch, lookup: dq_dataset }
+  - { name: dq_batch_assets, parent: dq_batch, child: dq_asset, lookup: dq_batch }
+  - { name: dq_asset_bronzesnapshots, parent: dq_asset, child: dq_bronzesnapshot, lookup: dq_asset }
+  - { name: dq_asset_columnprofiles, parent: dq_asset, child: dq_columnprofile, lookup: dq_asset }
+  - { name: dq_asset_rules, parent: dq_asset, child: dq_rule, lookup: dq_asset }
+  - { name: dq_rule_results, parent: dq_rule, child: dq_ruleresult, lookup: dq_rule }
+  - { name: dq_ruleresult_evidence, parent: dq_ruleresult, child: dq_evidence, lookup: dq_ruleresult }
+  - { name: dq_asset_mappings, parent: dq_asset, child: dq_mapping, lookup: dq_asset }
+  - { name: dq_dataset_approvals, parent: dq_dataset, child: dq_approval, lookup: dq_dataset }
+  - { name: dq_asset_silverrows, parent: dq_asset, child: dq_silverrow, lookup: dq_asset }
+  - { name: dq_dataset_goldrecipes, parent: dq_dataset, child: dq_goldrecipe, lookup: dq_dataset }
+  - { name: dq_goldrecipe_results, parent: dq_goldrecipe, child: dq_goldresult, lookup: dq_goldrecipe }
+  - { name: dq_dataset_activities, parent: dq_dataset, child: dq_activity, lookup: dq_dataset }
+
+securityRoles:
+  DQ Operator: [dq_dataset:read, dq_ingestionrun:create-read, dq_asset:read, dq_columnprofile:read]
+  DQ Reviewer: [dq_rule:read-write, dq_mapping:read-write, dq_evidence:read]
+  DQ Approver: [dq_approval:create-read, dq_goldrecipe:read-write]
+  DQ Administrator: [all:organization]
+  DQ Backend Application: [all:organization]

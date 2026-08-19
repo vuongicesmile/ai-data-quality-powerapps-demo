@@ -21,7 +21,8 @@ export interface PlatformGateway {
   getLineage(datasetKey: string): Promise<Lineage>;
 }
 
-class HttpPlatformGateway implements PlatformGateway {
+/** Local worker preview only. Production registers generated Power Platform services. */
+class LocalHttpPlatformGateway implements PlatformGateway {
   private readonly baseUrl = `${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/v1/datasets`;
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -54,7 +55,33 @@ class HttpPlatformGateway implements PlatformGateway {
   getLineage = (key: string) => this.request<Lineage>(`/${key}/lineage`);
 }
 
-let gateway: PlatformGateway = new HttpPlatformGateway();
+class UnconfiguredPowerPlatformGateway implements PlatformGateway {
+  private unavailable(): never {
+    throw new Error("Power Platform services are not registered. Add Dataverse tables and DQ_StartIngestion with the Power Apps CLI.");
+  }
+  getDataset = async (): Promise<Dataset> => this.unavailable();
+  startIngestion = async (): Promise<Record<string, unknown>> => this.unavailable();
+  discover = async (): Promise<Record<string, unknown>> => this.unavailable();
+  profile = async (): Promise<ProfileResponse> => this.unavailable();
+  selectAsset = async (): Promise<Dataset> => this.unavailable();
+  getProfiles = async (): Promise<ProfileResponse> => this.unavailable();
+  approveAllRules = async (): Promise<Record<string, unknown>> => this.unavailable();
+  executeRules = async (): Promise<Record<string, unknown>> => this.unavailable();
+  reviewRule = async (): Promise<Record<string, unknown>> => this.unavailable();
+  getMapping = async (): Promise<Mapping> => this.unavailable();
+  approveAllMappings = async (): Promise<Record<string, unknown>> => this.unavailable();
+  approveLayer = async (): Promise<Record<string, unknown>> => this.unavailable();
+  runSilver = async (): Promise<Record<string, unknown>> => this.unavailable();
+  listGoldRecipes = async (): Promise<GoldRecipe[]> => this.unavailable();
+  createGoldRecipe = async (): Promise<GoldRecipe> => this.unavailable();
+  reviewGoldRecipe = async (): Promise<GoldRecipe> => this.unavailable();
+  runGold = async (): Promise<Record<string, unknown>> => this.unavailable();
+  getLineage = async (): Promise<Lineage> => this.unavailable();
+}
+
+let gateway: PlatformGateway = import.meta.env.DEV
+  ? new LocalHttpPlatformGateway()
+  : new UnconfiguredPowerPlatformGateway();
 
 /** Register the generated custom-connector service during Power Apps initialization. */
 export function registerPowerAppsGateway(powerAppsGateway: PlatformGateway): void {

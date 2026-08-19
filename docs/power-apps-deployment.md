@@ -1,47 +1,44 @@
-# Power Apps Code App deployment
+# Power Apps, Dataverse, and Flow deployment
 
-The frontend is a React/TypeScript Code App in `apps/power-app`. Local
-development uses the HTTP gateway. In Power Platform, register the generated
-FastAPI OpenAPI document as a custom connector and implement the generated
-connector adapter at `registerPowerAppsGateway()` in `platformClient.ts`.
+## 1. Create the solution
 
-## Prerequisites
+Create unmanaged solution `AIDataQualityPowerAppsDemo` with publisher prefix
+`dq`. Use `power-platform/dataverse/schema.yaml` to create tables, Choices,
+alternate keys, auditing, and roles. Add environment variables and connection
+references from `power-platform/solution/solution.yaml`.
 
-- A Power Platform environment with Dataverse and Code Apps enabled.
-- Node.js LTS and npm.
-- Access to `make.powerapps.com` for the target environment.
-- A reachable HTTPS deployment of this API with organization-approved auth.
+## 2. Import the worker connector
 
-## Build locally
+Import `power-platform/custom-connector/openapi.yaml`, replace the worker host
+and Entra API application ID, configure OAuth, and create the solution-owned
+connection reference `dq_WorkerConnectorConnection`.
 
-```bash
-cd apps/power-app
-npm ci
-npm run build
-npm run dev
-```
+## 3. Build DQ_StartIngestion
 
-The npm project includes `@microsoft/power-apps`. Authenticate and initialize
-against the chosen environment using the current `power-apps` CLI; do not copy
-a `power.config.json` from another app or tenant. Tenant-specific app IDs,
-connection IDs and generated connector files are intentionally gitignored.
+Create a solution-aware Power Apps V2 instant flow following
+`power-platform/flows/DQ_StartIngestion.contract.json`. Use Dataverse and worker
+connection references. The failure scope must always persist a FAILED run.
 
-## Custom connector
+## 4. Bind the Code App
 
-1. Export `https://<api-host>/openapi.json`.
-2. Import it as a custom connector in the same solution as the Code App.
-3. Configure the API hostname and the environment's authentication policy.
-4. Add the connector to the Code App with the npm CLI data-source command.
-5. Map generated operations to `PlatformGateway`; call
-   `registerPowerAppsGateway(gateway)` during startup.
-6. Test ingestion status, profiles, evidence, mapping, approvals, Silver, Gold
-   and lineage from a non-admin application user.
+From `apps/power-app`, authenticate the npm `power-apps` CLI, initialize the app
+in this solution, add each `dq_` Dataverse table, add the custom connector, and
+add `DQ_StartIngestion`. The CLI writes typed models/services under
+`src/generated`; tenant-specific generated output and `power.config.json` stay
+uncommitted.
 
-## Publish
+Wire generated services to the interfaces in
+`src/services/powerPlatformGateway.ts` and call
+`registerPowerPlatformServices` during app startup. Production does not fall
+back to the local HTTP gateway.
 
-Run the CLI build/validate workflow, push the Code App into an unmanaged
-development solution, publish it, then export/import the solution through the
-normal Power Platform ALM path. Keep API URL and connector connection
-references environment-specific. Do not place Graph credentials in the Code
-App or custom connector client configuration.
+On Linux, the Power Apps CLI may require the system `libsecret` runtime. Install
+it through the workstation's approved package-management process if the CLI
+reports `libsecret-1.so.0` missing.
 
+## 5. ALM
+
+Push the Code App into the unmanaged development solution. Export a managed
+solution for Test/Prod and provide deployment settings for environment
+variables and connection references. Do not export tenant credentials or
+user-specific connection IDs into Git.

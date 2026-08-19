@@ -1,0 +1,36 @@
+{
+  "name": "DQ_StartIngestion",
+  "solutionAware": true,
+  "trigger": {
+    "type": "PowerAppsV2",
+    "inputs": {
+      "datasetKey": "string",
+      "force": "boolean"
+    }
+  },
+  "scopes": [
+    {
+      "name": "Run",
+      "actions": [
+        "Validate datasetKey",
+        "Create dq_ingestionrun with QUEUED status",
+        "Update dq_ingestionrun to RUNNING",
+        "Call AI Data Quality Worker StartIngestion with runId",
+        "Update dq_ingestionrun from worker result",
+        "Create dq_activity event",
+        "Return runId, status, progress, datasetKey"
+      ]
+    },
+    {
+      "name": "Failure",
+      "runAfter": ["Run:Failed", "Run:TimedOut"],
+      "actions": [
+        "Update dq_ingestionrun to FAILED",
+        "Persist bounded error type and message",
+        "Create dq_activity failure event",
+        "Return failed run response"
+      ]
+    }
+  ],
+  "idempotency": ["runId", "datasetKey", "sourceVersionHash", "batchId"]
+}
