@@ -16,10 +16,10 @@ Power Apps Code App
              v
 FastAPI profiling/transformation worker
              |
-             ├── SharePoint source library
-             ├── SharePoint immutable Bronze library
+             ├── existing SharePoint `TimerApp` lists
              └── Microsoft Dataverse
                    ├── workflow and audit
+                   ├── immutable Bronze snapshots and rows
                    ├── profiles, rules, evidence, mappings and approvals
                    ├── generic Silver rows
                    └── versioned Gold recipes and results
@@ -51,14 +51,14 @@ Replace them as follows:
 | Previous component | Power Platform-native replacement |
 |---|---|
 | Airflow | Solution-aware Power Automate cloud flows |
-| SeaweedFS Bronze | Versioned SharePoint `DataQualityBronze` library |
+| SeaweedFS Bronze | Immutable Dataverse Bronze snapshot/row tables |
 | ClickHouse workflow state | Normalized Dataverse tables |
 | ClickHouse Silver | Dataverse generic Silver-row table |
 | ClickHouse Gold | Dataverse Gold recipe/result tables |
 | API-only UI access | Generated Dataverse and Flow TypeScript services |
 
 FastAPI remains only for bounded operations that are unsuitable for Power Fx
-or Power Automate, such as CSV parsing, profiling, rule execution, mapping
+or Power Automate, such as list-row normalization, profiling, rule execution, mapping
 conversion, reconciliation, and masked evidence generation. It must remain
 stateless; Dataverse and SharePoint are the systems of record.
 
@@ -67,7 +67,7 @@ stateless; Dataverse and SharePoint are the systems of record.
 Keep all existing Generic Dataset capabilities:
 
 - Power Apps-triggered ingestion and observable run status;
-- multi-asset SharePoint batches;
+- multi-asset batches sourced from the four approved `TimerApp` lists;
 - immutable Bronze snapshots and manifests;
 - schema discovery and deterministic profiling;
 - quality scores, violations, and masked evidence;
@@ -90,6 +90,7 @@ dq_ingestionrun
 dq_batch
 dq_asset
 dq_bronzesnapshot
+dq_bronzerow
 dq_columnprofile
 dq_rule
 dq_ruleresult
@@ -105,35 +106,41 @@ dq_activity
 Use lookups for ownership and lifecycle relationships, Choice columns for
 statuses, alternate keys for idempotent integration, and Dataverse auditing on
 governed records. Store only bounded row/profile JSON where a truly generic
-schema is necessary. Do not dynamically create Dataverse tables per uploaded
-CSV.
+schema is necessary. Do not dynamically create Dataverse tables per source
+list.
 
 Dataverse is the demo serving and governance platform, not an unlimited
-analytical warehouse. Default demo limit: 5,000 rows per file and 25 MB per
-file. A future high-volume variant may move Bronze/Silver/Gold to Microsoft
+analytical warehouse. Default demo limit: 5,000 rows per source list per run.
+A future high-volume variant may move Bronze/Silver/Gold to Microsoft
 Fabric, but Fabric is not part of the current implementation scope.
 
 ## SharePoint and Graph
 
-Raw CSV never passes through Power Apps browser code.
+Raw SharePoint list items never pass through Power Apps browser code.
 
 Required flow:
 
 ```text
-SharePoint source -> backend/flow -> SharePoint Bronze -> Dataverse metadata
+TimerApp lists -> backend/flow -> immutable Dataverse Bronze rows -> governed lifecycle
 ```
 
-Use a separate `DataQualityBronze` document library and immutable paths:
+Reuse the existing site and source lists; do not provision a new SharePoint
+site, document library, folder tree, or CSV upload for this demo:
 
 ```text
-GenericDatasets/{dataset-key}/batches/{batch-id}/
-GenericDatasets/{dataset-key}/_manifests/{timestamp}.json
+https://titancorpvncom.sharepoint.com/sites/TimerApp
+TimerList_AllProject01
+TimerList_AllProject02
+TimerList_AllProject03
+TimerList_AllProject04
 ```
 
-Keep Microsoft Graph behind an infrastructure adapter. Use app-only
-`Sites.Selected` and grant write access only to the selected development site
-when the backend publishes Bronze snapshots. Never expose Graph tokens or
-credentials to Power Apps.
+Treat each approved list as one logical asset. Capture bounded list-item JSON,
+source item ID, eTag, row hash, batch ID, and capture time in immutable
+Dataverse `dq_bronzerow` records, with batch inventory in
+`dq_bronzesnapshot`. Keep Microsoft Graph behind a read-only infrastructure
+adapter. Use app-only `Sites.Selected` with access only to `TimerApp`. Never
+expose Graph tokens or credentials to Power Apps.
 
 ## Power Apps and Power Automate
 
@@ -145,7 +152,7 @@ Use React/TypeScript and the current npm `@microsoft/power-apps` CLI.
 - Use solution connection references rather than user-specific connection IDs.
 - Keep generated tenant-specific configuration and `power.config.json` out of
   source control.
-- Use Power Platform environment variables for SharePoint paths, worker URL,
+- Use Power Platform environment variables for the TimerApp site/list allowlist, worker URL,
   limits, and environment-specific settings.
 - Package Dataverse tables, flows, custom connector, environment variables,
   connection references, security roles, and Code App in one solution.
@@ -171,7 +178,7 @@ When implementation is explicitly approved, proceed in this order:
 1. Dataverse logical schema, relationships, choices, keys, and security roles.
 2. Domain contracts and Dataverse/SharePoint adapter interfaces.
 3. Dataverse Web API client and normalized repositories.
-4. SharePoint Bronze publication and manifest inventory.
+4. TimerApp list ingestion and Dataverse Bronze snapshot inventory.
 5. Power Automate ingestion orchestration.
 6. FastAPI composition and provider-neutral worker endpoints.
 7. Code App generated Dataverse/Flow services.

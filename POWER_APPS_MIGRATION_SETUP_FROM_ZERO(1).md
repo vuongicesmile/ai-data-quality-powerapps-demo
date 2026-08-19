@@ -5,10 +5,11 @@
 This document replaces the earlier transitional architecture that retained
 Airflow, SeaweedFS, and ClickHouse.
 
-Repository composition now uses Dataverse, SharePoint Bronze, Power Automate
-contracts, and generated-service bindings. Tenant-owned solution components
-still require creation/binding in the selected Power Platform environment.
-Legacy adapters are disconnected and retained only until tenant parity passes.
+The requirement was revised after validating the existing tenant. Reuse the
+existing SharePoint `TimerApp` site and its four approved lists. Do not create a
+new SharePoint site/library or upload replacement CSV files. The repository's
+earlier SharePoint-library Bronze implementation is now superseded and must be
+adapted before tenant validation.
 
 Target repository:
 
@@ -22,7 +23,7 @@ Objective:
 Preserve the complete Generic Dataset Demo
 Replace Google Drive with SharePoint Online
 Replace Airflow with Power Automate
-Replace SeaweedFS with a SharePoint Bronze library
+Replace SeaweedFS with immutable Dataverse Bronze snapshot/row tables
 Replace ClickHouse workflow/Silver/Gold with Microsoft Dataverse
 Use direct Dataverse and Flow services in the Power Apps Code App
 ```
@@ -44,10 +45,10 @@ Power Automate: DQ_StartIngestion
              v
 FastAPI profiling/transformation worker
              |
-             ├── Microsoft Graph / SharePoint source
-             ├── SharePoint DataQualityBronze library
+             ├── Microsoft Graph / existing TimerApp lists
              └── Microsoft Dataverse
                    ├── datasets, batches, assets, run status
+                   ├── immutable Bronze snapshots and rows
                    ├── profiles, rules, results, evidence
                    ├── mappings, approvals, audit activity
                    ├── generic Silver rows and rejections
@@ -58,8 +59,8 @@ FastAPI profiling/transformation worker
 
 | Concern | System of record |
 |---|---|
-| Source CSV | SharePoint `DataQualityDatasets` library |
-| Immutable Bronze CSV | SharePoint `DataQualityBronze` library |
+| Source rows | Existing SharePoint `TimerApp` lists |
+| Immutable Bronze | Dataverse `dq_bronzesnapshot` and `dq_bronzerow` |
 | Workflow state | Dataverse |
 | Profiles and quality | Dataverse |
 | Rules and evidence | Dataverse |
@@ -90,18 +91,18 @@ reviewed in a real Power Platform environment.
 
 # 2. Non-Negotiable Rules
 
-## 2.1 Raw files never pass through Power Apps
+## 2.1 Raw source rows never pass through Power Apps
 
 Forbidden:
 
 ```text
-SharePoint -> browser -> parse/upload CSV -> worker
+SharePoint lists -> browser -> serialize/upload rows -> worker
 ```
 
 Required:
 
 ```text
-SharePoint -> Power Automate/backend -> SharePoint Bronze
+TimerApp lists -> Power Automate/backend -> Dataverse Bronze snapshot
 ```
 
 Power Apps triggers work and displays governed state only.
@@ -111,8 +112,8 @@ Power Apps triggers work and displays governed state only.
 Do not store the entire application as one opaque workflow JSON record. Use
 tables, lookups, Choice columns, alternate keys, audit, and security roles.
 
-Generic row payloads may use bounded JSON in Silver/Gold records because CSV
-schemas are dynamic. Important fields such as dataset, batch, asset, row
+Generic row payloads may use bounded JSON in Bronze/Silver/Gold records because
+SharePoint list schemas can vary. Important fields such as dataset, batch, asset, row
 number, status, hash, approval, and timestamps remain normal Dataverse columns.
 
 ## 2.3 Demo scale is explicit
@@ -120,9 +121,8 @@ number, status, hash, approval, and timestamps remain normal Dataverse columns.
 Default limits:
 
 ```text
-Maximum files per dataset: 100
-Maximum file size: 25 MB
-Maximum rows per file: 5,000
+Approved source lists: 4
+Maximum rows per source list per run: 5,000
 Maximum stored evidence per rule: 100
 ```
 
@@ -305,16 +305,27 @@ dq_bronzesnapshot
   dq_bronzesnapshotid
   dq_name
   dq_asset                      Lookup -> dq_asset
-  dq_driveitemid
-  dq_etag
-  dq_weburl
-  dq_contenthash
-  dq_sizebytes
-  dq_immutablepath
+  dq_sourcelistid
+  dq_sourcelistname
+  dq_sourceweburl
+  dq_rowcount
+  dq_snapshotversionhash
+  dq_capturedat
+dq_bronzerow
+  dq_bronzerowid
+  dq_snapshot                   Lookup -> dq_bronzesnapshot
+  dq_sourceitemid
+  dq_sourceetag
+  dq_sourcerownumber
+  dq_rowhash
+  dq_payloadjson
+  dq_capturedat
 ```
 
-Do not duplicate raw CSV bytes in Dataverse. Dataverse stores governed metadata
-and the SharePoint Bronze link.
+The four source lists remain authoritative. Dataverse stores an immutable,
+bounded row snapshot so profiling and reruns do not change when a SharePoint
+item is later edited. Alternate keys on snapshot/list/item/version make capture
+idempotent.
 
 ## Step 2.3 — Profiling, rules, and evidence
 
@@ -371,7 +382,7 @@ dq_goldresult
   reconciliation status
 ```
 
-Do not create one Dataverse table dynamically for every arbitrary CSV schema.
+Do not create one Dataverse table dynamically for every SharePoint list schema.
 
 ## Step 2.6 — Lineage and audit
 
@@ -382,51 +393,51 @@ dataset lifecycle, rule review, mapping, recipe, approval, and status columns.
 
 # Phase 3 — SharePoint Source and Bronze
 
-Status: SharePoint Bronze adapter implemented; tenant proof pending.
+Status: requirement revised; existing TimerApp access proven, Dataverse Bronze
+row capture not yet implemented.
 
-Source library:
+Reuse only this existing site:
 
 ```text
-DataQualityDatasets/GenericDatasets/ecommerce-v1/
+https://titancorpvncom.sharepoint.com/sites/TimerApp
 ```
 
-Create a separate Bronze library:
+Approved source assets:
 
 ```text
-DataQualityBronze/
-  GenericDatasets/ecommerce-v1/
-    batches/{batch-id}/
-      customers.csv
-      orders.csv
-      order_items.csv
-      products.csv
-    _manifests/{timestamp}.json
+TimerList_AllProject01
+TimerList_AllProject02
+TimerList_AllProject03
+TimerList_AllProject04
 ```
 
-Each Bronze asset must retain:
+Do not create another site, document library, folder tree, or CSV copy. Read
+each list through Microsoft Graph as one logical asset and persist an immutable
+snapshot in Dataverse. Each snapshot/row must retain:
 
 ```text
-source drive item ID
-source eTag/version
-Bronze drive item ID
-Bronze eTag
+source site and list ID/name
+source list item ID
+source item eTag/version
 SharePoint web URL
-SHA-256
-file size
-row and column counts
+canonical row SHA-256
+bounded row payload JSON
+row and column inventory
 batch ID
-publication timestamp
+capture timestamp
 ```
 
-Use Microsoft Graph app-only `Sites.Selected`. The backend application needs
-write access only to the selected SharePoint site because it publishes the
-Bronze snapshot. No Graph credential may appear in Power Apps.
+Use Microsoft Graph app-only `Sites.Selected`. The existing app grant is scoped
+to `TimerApp`; Graph access should be read-only for ingestion. Dataverse, not
+SharePoint, owns immutable Bronze copies. No Graph credential may appear in
+Power Apps, source control, scripts, or exported solution configuration.
 
 ---
 
 # Phase 4 — Dataverse Backend Boundary
 
-Status: Dataverse OAuth/OData and normalized repositories implemented; tenant proof pending.
+Status: Dataverse OAuth/OData exists; Bronze repository must be revised from
+SharePoint files to Dataverse list-row snapshots.
 
 Create infrastructure boundaries:
 
@@ -438,9 +449,10 @@ DataverseProfileRepository
 DataverseRuleRepository
 DataverseMappingRepository
 DataverseApprovalRepository
+DataverseBronzeRepository
 DataverseSilverRepository
 DataverseGoldRepository
-SharePointBronzeStore
+SharePointListSource
 ```
 
 Dataverse client requirements:
@@ -463,7 +475,8 @@ or depend on ClickHouse/S3/Airflow after cutover.
 
 # Phase 5 — Power Automate Orchestration
 
-Status: Flow contract and connector operation implemented; tenant Flow creation pending.
+Status: existing Flow contract must be revised for TimerApp list ingestion;
+tenant Flow creation pending.
 
 Create a solution-aware instant flow:
 
@@ -479,7 +492,8 @@ Flow sequence:
 Validate caller and dataset
   -> create dq_ingestionrun
   -> call worker custom connector
-  -> worker snapshots SharePoint source to Bronze
+  -> worker reads the four allowlisted TimerApp lists
+  -> worker writes an immutable Dataverse Bronze batch
   -> worker profiles and persists Dataverse records
   -> update progress/status
   -> write dq_activity
@@ -556,11 +570,10 @@ Create solution environment variables for:
 
 ```text
 SharePoint host
-Source site path/library/folder
-Bronze library/root
+TimerApp site path and site ID
+Allowlisted source list names/IDs
 Worker base URL
-Maximum file size
-Maximum rows per file
+Maximum rows per source list
 Maximum evidence rows
 ```
 
@@ -574,15 +587,16 @@ not hard-coded connection IDs.
 
 # Phase 8 — Code Refactor Sequence
 
-Status: repository refactor implemented; legacy deletion deferred until tenant acceptance.
+Status: prior file-based refactor is superseded; TimerApp/Dataverse Bronze
+adaptation pending explicit implementation instruction.
 
 Safe sequence:
 
 1. Add Dataverse schema manifest and logical-name constants.
 2. Change domain ports without deleting existing adapters.
 3. Implement Dataverse authentication/client/repositories.
-4. Implement SharePoint Bronze store.
-5. Switch FastAPI composition to Dataverse and SharePoint.
+4. Implement TimerApp list source and Dataverse Bronze row capture.
+5. Switch FastAPI composition to the allowlisted lists and Dataverse.
 6. Add Power Automate flow and connector definitions.
 7. Bind Code App generated Dataverse and Flow services.
 8. Prove the tenant path from source through Gold approval.
@@ -605,8 +619,8 @@ The migration is complete only when a real environment proves:
 [ ] Code App opens as a non-admin user
 [ ] Code App starts DQ_StartIngestion
 [ ] Flow run is visible and reports progress
-[ ] Four SharePoint source files become one immutable Bronze batch
-[ ] Bronze manifest and Dataverse metadata hashes match
+[ ] Four TimerApp source lists become one immutable Dataverse Bronze batch
+[ ] Bronze row hashes/counts reconcile to the captured SharePoint list versions
 [ ] Profiles and quality are visible
 [ ] Rule review/execution and masked evidence work
 [ ] Mapping approval works with concurrency protection
@@ -628,7 +642,7 @@ Until all tenant checkpoints pass:
 
 1. Keep commit `adff09e` and the transitional branch intact.
 2. Keep Dataverse work on `feat/sharepoint-powerapps-platform`.
-3. Do not delete SharePoint source or Bronze history.
+3. Do not modify/delete TimerApp source lists or Dataverse Bronze history.
 4. Do not remove old adapters before the replacement path is proven.
 5. If Dataverse cannot meet the agreed demo limits, stop and create a separate
    Microsoft Fabric architecture decision instead of restoring ClickHouse
