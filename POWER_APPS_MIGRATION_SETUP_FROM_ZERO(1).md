@@ -8,8 +8,9 @@ Airflow, SeaweedFS, and ClickHouse.
 The requirement was revised after validating the existing tenant. Reuse the
 existing SharePoint `TimerApp` site and its four approved lists. Do not create a
 new SharePoint site/library or upload replacement CSV files. The repository's
-earlier SharePoint-library Bronze implementation is now superseded and must be
-adapted before tenant validation.
+runtime now reads the four lists through Microsoft Graph and writes immutable
+Bronze snapshots/rows to Dataverse. Tenant Dataverse provisioning and end-to-end
+Power Automate/Code App binding remain acceptance work.
 
 Target repository:
 
@@ -393,8 +394,9 @@ dataset lifecycle, rule review, mapping, recipe, approval, and status columns.
 
 # Phase 3 — SharePoint Source and Bronze
 
-Status: requirement revised; existing TimerApp access proven, Dataverse Bronze
-row capture not yet implemented.
+Status: implemented in the repository. Live app-only Graph reads against all
+four TimerApp lists are proven; tenant Dataverse row capture remains an
+acceptance checkpoint after solution provisioning.
 
 Reuse only this existing site:
 
@@ -436,8 +438,9 @@ Power Apps, source control, scripts, or exported solution configuration.
 
 # Phase 4 — Dataverse Backend Boundary
 
-Status: Dataverse OAuth/OData exists; Bronze repository must be revised from
-SharePoint files to Dataverse list-row snapshots.
+Status: implemented in the repository. Dataverse OAuth/OData, normalized state,
+Silver/Gold repositories, and immutable Bronze snapshot/row persistence are
+composed into the worker. Tenant application-user validation remains pending.
 
 Create infrastructure boundaries:
 
@@ -475,8 +478,8 @@ or depend on ClickHouse/S3/Airflow after cutover.
 
 # Phase 5 — Power Automate Orchestration
 
-Status: existing Flow contract must be revised for TimerApp list ingestion;
-tenant Flow creation pending.
+Status: TimerApp list-ingestion Flow contract is implemented; tenant Flow
+creation and generated Code App Flow binding remain pending.
 
 Create a solution-aware instant flow:
 
@@ -587,8 +590,9 @@ not hard-coded connection IDs.
 
 # Phase 8 — Code Refactor Sequence
 
-Status: prior file-based refactor is superseded; TimerApp/Dataverse Bronze
-adaptation pending explicit implementation instruction.
+Status: steps 1-6 are implemented in the repository for TimerApp list ingestion
+and Dataverse Bronze. Generated tenant bindings, full tenant proof, and legacy
+adapter removal remain pending.
 
 Safe sequence:
 

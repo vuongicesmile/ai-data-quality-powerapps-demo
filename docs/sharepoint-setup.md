@@ -1,29 +1,30 @@
-# SharePoint source and Bronze setup
+# Existing TimerApp source setup
 
-## Libraries
+## Reused tenant resources
 
-Create a private site `/sites/AIDataQualityDev` and two document libraries:
+Do not create a site, document library, folder tree, or CSV upload. Reuse:
 
 ```text
-DataQualityDatasets/GenericDatasets/ecommerce-v1/
-DataQualityBronze/GenericDatasets/
+https://<tenant>.sharepoint.com/sites/TimerApp
+TimerList_AllProject01
+TimerList_AllProject02
+TimerList_AllProject03
+TimerList_AllProject04
 ```
 
-Upload the four files from `sample-data/ecommerce-v1` to the source folder.
-Enable version history on both libraries. Operators receive read access to the
-source; they don't need direct write access to Bronze.
+The lists remain authoritative and are never modified by the worker. Immutable
+Bronze snapshots are written to Dataverse tables, not back to SharePoint.
 
 ## Entra and Microsoft Graph
 
 Register a single-tenant backend application, add Microsoft Graph application
 permission `Sites.Selected`, grant admin consent, and grant that application
-`write` on only the development site. Write is required because the worker
-publishes immutable Bronze snapshots and manifests.
+`read` on only `TimerApp`.
 
 Resolve the site:
 
 ```http
-GET https://graph.microsoft.com/v1.0/sites/<tenant>.sharepoint.com:/sites/AIDataQualityDev
+GET https://graph.microsoft.com/v1.0/sites/<tenant>.sharepoint.com:/sites/TimerApp
 ```
 
 Grant the selected application with an administrator identity:
@@ -33,7 +34,7 @@ POST https://graph.microsoft.com/v1.0/sites/{site-id}/permissions
 Content-Type: application/json
 
 {
-  "roles": ["write"],
+  "roles": ["read"],
   "grantedToIdentities": [{
     "application": {
       "id": "<backend-client-id>",
@@ -45,10 +46,10 @@ Content-Type: application/json
 
 ## Runtime configuration
 
-Set the values from `.env.example`, including `SHAREPOINT_BRONZE_LIBRARY` and
-`DATAVERSE_URL`. Never commit the client secret. Create a Dataverse application
+Set `SHAREPOINT_SITE_PATH`, `SHAREPOINT_SOURCE_LISTS`, and `DATAVERSE_URL` from
+`.env.example`. Never commit the client secret. Create a Dataverse application
 user for the same app registration and assign `DQ Backend Application`.
 
-Verify in order: token, site, both drives, source listing, one source download,
-Bronze folder creation/upload, manifest download, and Dataverse metadata. A
-403 usually means the selected-site grant or Dataverse security role is absent.
+Verify in order: token, site, four allowlisted lists, bounded list-item paging,
+`dq_bronzesnapshot`, `dq_bronzerow`, and reconstructed rows. A 403 usually
+means the selected-site grant or Dataverse security role is absent.

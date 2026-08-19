@@ -3,7 +3,8 @@
 ## 1. Create the solution
 
 Create unmanaged solution `AIDataQualityPowerAppsDemo` with publisher prefix
-`dq`. Use `power-platform/dataverse/schema.yaml` to create tables, Choices,
+`dq`. Use `power-platform/dataverse/schema.yaml` to create tables including
+`dq_bronzesnapshot`/`dq_bronzerow`, Choices,
 alternate keys, auditing, and roles. Add environment variables and connection
 references from `power-platform/solution/solution.yaml`.
 

@@ -80,6 +80,8 @@ tables:
       dq_sourceitemid: { type: Text, maxLength: 500 }
       dq_sourceetag: { type: Text, maxLength: 500 }
       dq_sourcepath: { type: Text, maxLength: 2000 }
+      dq_sourcelistid: { type: Text, maxLength: 500 }
+      dq_sourcelistname: { type: Text, maxLength: 500 }
       dq_rowcount: { type: WholeNumber, min: 0 }
       dq_columncount: { type: WholeNumber, min: 0 }
       dq_contenthash: { type: Text, maxLength: 128 }
@@ -91,12 +93,26 @@ tables:
     columns:
       dq_batchkey: { type: Text, maxLength: 200, required: true }
       dq_assetkey: { type: Text, maxLength: 200, required: true }
-      dq_driveitemid: { type: Text, maxLength: 500 }
-      dq_etag: { type: Text, maxLength: 500 }
-      dq_weburl: { type: Url }
-      dq_contenthash: { type: Text, maxLength: 128 }
-      dq_sizebytes: { type: WholeNumber, min: 0 }
-      dq_immutablepath: { type: Text, maxLength: 2000 }
+      dq_sourcelistid: { type: Text, maxLength: 500, required: true }
+      dq_sourcelistname: { type: Text, maxLength: 500, required: true }
+      dq_sourceweburl: { type: Url }
+      dq_rowcount: { type: WholeNumber, min: 0 }
+      dq_snapshotversionhash: { type: Text, maxLength: 128, required: true }
+      dq_capturedat: { type: DateTime, required: true }
+  dq_bronzerow:
+    entitySetName: dq_bronzerows
+    primaryName: dq_name
+    alternateKeys: [[dq_batchkey, dq_assetkey, dq_sourceitemid]]
+    columns:
+      dq_datasetkey: { type: Text, maxLength: 200, required: true }
+      dq_batchkey: { type: Text, maxLength: 200, required: true }
+      dq_assetkey: { type: Text, maxLength: 200, required: true }
+      dq_sourceitemid: { type: Text, maxLength: 500, required: true }
+      dq_sourceetag: { type: Text, maxLength: 500 }
+      dq_sourcerownumber: { type: WholeNumber, min: 1, required: true }
+      dq_rowhash: { type: Text, maxLength: 128, required: true }
+      dq_payloadjson: { type: MultilineText, maxLength: 1048576, required: true }
+      dq_capturedat: { type: DateTime, required: true }
   dq_columnprofile:
     entitySetName: dq_columnprofiles
     primaryName: dq_name
@@ -240,6 +256,7 @@ relationships:
   - { name: dq_dataset_batches, parent: dq_dataset, child: dq_batch, lookup: dq_dataset }
   - { name: dq_batch_assets, parent: dq_batch, child: dq_asset, lookup: dq_batch }
   - { name: dq_asset_bronzesnapshots, parent: dq_asset, child: dq_bronzesnapshot, lookup: dq_asset }
+  - { name: dq_bronzesnapshot_rows, parent: dq_bronzesnapshot, child: dq_bronzerow, lookup: dq_bronzesnapshot }
   - { name: dq_asset_columnprofiles, parent: dq_asset, child: dq_columnprofile, lookup: dq_asset }
   - { name: dq_asset_rules, parent: dq_asset, child: dq_rule, lookup: dq_asset }
   - { name: dq_rule_results, parent: dq_rule, child: dq_ruleresult, lookup: dq_rule }
@@ -252,7 +269,7 @@ relationships:
   - { name: dq_dataset_activities, parent: dq_dataset, child: dq_activity, lookup: dq_dataset }
 
 securityRoles:
-  DQ Operator: [dq_dataset:read, dq_ingestionrun:create-read, dq_asset:read, dq_columnprofile:read]
+  DQ Operator: [dq_dataset:read, dq_ingestionrun:create-read, dq_asset:read, dq_bronzesnapshot:read, dq_bronzerow:read, dq_columnprofile:read]
   DQ Reviewer: [dq_rule:read-write, dq_mapping:read-write, dq_evidence:read]
   DQ Approver: [dq_approval:create-read, dq_goldrecipe:read-write]
   DQ Administrator: [all:organization]

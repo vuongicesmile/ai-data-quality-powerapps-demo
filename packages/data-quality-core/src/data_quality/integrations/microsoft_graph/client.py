@@ -1,4 +1,4 @@
-"""Narrow Microsoft Graph client for SharePoint Site/Drive/DriveItem access."""
+"""Bounded Microsoft Graph client for SharePoint sites, lists, and legacy drives."""
 
 from __future__ import annotations
 
@@ -46,6 +46,32 @@ class MicrosoftGraphClient:
         return self._json(
             f"/sites/{quote(hostname, safe='.')}:{quote(path, safe='/')}",
             params={"$select": "id,displayName,webUrl"},
+        )
+
+    def list_site_lists(self, site_id: str) -> list[dict[str, Any]]:
+        return self._collection(
+            f"/sites/{quote(site_id, safe=',')}/lists",
+            params={"$select": "id,name,displayName,webUrl,lastModifiedDateTime,list"},
+        )
+
+    def get_list_by_name(self, site_id: str, name: str) -> dict[str, Any]:
+        expected = name.casefold()
+        for item in self.list_site_lists(site_id):
+            candidates = {
+                str(item.get("name", "")).casefold(),
+                str(item.get("displayName", "")).casefold(),
+            }
+            if expected in candidates:
+                return item
+        raise ResourceNotFoundError(f"SharePoint list not found: {name}")
+
+    def list_list_items(self, site_id: str, list_id: str) -> list[dict[str, Any]]:
+        return self._collection(
+            f"/sites/{quote(site_id, safe=',')}/lists/{quote(list_id, safe='')}/items",
+            params={
+                "$select": "id,eTag,lastModifiedDateTime,webUrl",
+                "$expand": "fields",
+            },
         )
 
     def list_site_drives(self, site_id: str) -> list[dict[str, Any]]:

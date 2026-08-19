@@ -9,15 +9,11 @@ solution:
       - ../flows/DQ_StartIngestion.contract.json
   environmentVariables:
     dq_SharePointHost: { type: Text, required: true }
-    dq_SourceSitePath: { type: Text, default: /sites/AIDataQualityDev }
-    dq_SourceLibrary: { type: Text, default: DataQualityDatasets }
-    dq_SourceFolder: { type: Text, default: GenericDatasets/ecommerce-v1 }
-    dq_BronzeLibrary: { type: Text, default: DataQualityBronze }
-    dq_BronzeRoot: { type: Text, default: GenericDatasets }
+    dq_SourceSitePath: { type: Text, default: /sites/TimerApp }
+    dq_SourceLists: { type: Text, default: TimerList_AllProject01,TimerList_AllProject02,TimerList_AllProject03,TimerList_AllProject04 }
     dq_WorkerBaseUrl: { type: Text, required: true }
-    dq_MaxFiles: { type: Number, default: 100 }
-    dq_MaxFileBytes: { type: Number, default: 26214400 }
-    dq_MaxRowsPerFile: { type: Number, default: 5000 }
+    dq_MaxLists: { type: Number, default: 4 }
+    dq_MaxRowsPerList: { type: Number, default: 5000 }
     dq_MaxEvidenceRows: { type: Number, default: 100 }
   connectionReferences:
     dq_SharePointConnection: shared_sharepointonline

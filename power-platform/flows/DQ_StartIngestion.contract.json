@@ -16,6 +16,8 @@
         "Create dq_ingestionrun with QUEUED status",
         "Update dq_ingestionrun to RUNNING",
         "Call AI Data Quality Worker StartIngestion with runId",
+        "Worker reads only the four allowlisted TimerApp lists",
+        "Worker persists immutable dq_bronzesnapshot and dq_bronzerow records",
         "Update dq_ingestionrun from worker result",
         "Create dq_activity event",
         "Return runId, status, progress, datasetKey"

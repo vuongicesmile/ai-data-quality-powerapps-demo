@@ -139,7 +139,10 @@ class DataverseStateRepository:
             str(row.get("dq_assetkey")): row
             for row in self.client.query(
                 "dq_bronzesnapshots",
-                select=["dq_assetkey", "dq_driveitemid", "dq_etag", "dq_weburl", "dq_immutablepath"],
+                select=[
+                    "dq_assetkey", "dq_sourcelistid", "dq_sourcelistname",
+                    "dq_sourceweburl", "dq_snapshotversionhash", "dq_capturedat",
+                ],
                 filter=f"dq_batchkey eq '{escaped}'",
             )
         }
@@ -148,6 +151,7 @@ class DataverseStateRepository:
             select=[
                 "dq_assetkey", "dq_filename", "dq_sourceitemid", "dq_sourceetag",
                 "dq_sourcepath", "dq_rowcount", "dq_contenthash", "dq_columnsjson",
+                "dq_sourcelistid", "dq_sourcelistname",
             ],
             filter=f"dq_batchkey eq '{escaped}'",
         )
@@ -161,15 +165,19 @@ class DataverseStateRepository:
                 source_id=str(row.get("dq_sourceitemid") or ""),
                 source_path=str(row.get("dq_sourcepath") or ""),
                 source_version=str(row.get("dq_sourceetag") or ""),
+                source_web_url=str(bronze.get("dq_sourceweburl") or ""),
                 size_bytes=0,
                 last_modified_at="",
-                bronze_key=str(bronze.get("dq_immutablepath") or ""),
-                bronze_item_id=str(bronze.get("dq_driveitemid") or ""),
-                bronze_etag=str(bronze.get("dq_etag") or ""),
-                bronze_web_url=str(bronze.get("dq_weburl") or ""),
+                bronze_key=f"dataverse://dq_bronzerows/{batch_key}/{asset_key}",
+                bronze_item_id=f"{batch_key}:{asset_key}",
+                bronze_etag=str(bronze.get("dq_snapshotversionhash") or ""),
+                bronze_web_url=str(bronze.get("dq_sourceweburl") or ""),
                 content_hash=str(row.get("dq_contenthash") or ""),
                 row_count=int(row.get("dq_rowcount") or 0),
                 columns=loads(row.get("dq_columnsjson"), []),
+                source_list_id=str(bronze.get("dq_sourcelistid") or row.get("dq_sourcelistid") or ""),
+                source_list_name=str(bronze.get("dq_sourcelistname") or row.get("dq_sourcelistname") or asset_key),
+                captured_at=str(bronze.get("dq_capturedat") or ""),
             )
 
     def _load_governance(self, state: WorkflowState) -> None:
@@ -358,6 +366,8 @@ class DataverseStateRepository:
                     "dq_sourceitemid": asset.source_id,
                     "dq_sourceetag": asset.source_version,
                     "dq_sourcepath": asset.source_path,
+                    "dq_sourcelistid": asset.source_list_id,
+                    "dq_sourcelistname": asset.source_list_name,
                     "dq_rowcount": asset.row_count,
                     "dq_columncount": len(asset.columns),
                     "dq_contenthash": asset.content_hash,
@@ -374,12 +384,12 @@ class DataverseStateRepository:
                         "dq_assets", {"dq_batchkey": batch_key, "dq_assetkey": asset.asset_key}
                     ),
                     "dq_assetkey": asset.asset_key,
-                    "dq_driveitemid": asset.bronze_item_id,
-                    "dq_etag": asset.bronze_etag,
-                    "dq_weburl": asset.bronze_web_url,
-                    "dq_contenthash": asset.content_hash,
-                    "dq_sizebytes": asset.size_bytes,
-                    "dq_immutablepath": asset.bronze_key,
+                    "dq_sourcelistid": asset.source_list_id,
+                    "dq_sourcelistname": asset.source_list_name,
+                    "dq_sourceweburl": asset.source_web_url,
+                    "dq_rowcount": asset.row_count,
+                    "dq_snapshotversionhash": asset.source_version,
+                    "dq_capturedat": asset.captured_at or state.updated_at,
                 },
             )
 

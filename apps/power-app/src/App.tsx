@@ -3,7 +3,7 @@ import { LineageRail } from "./components/LineageRail";
 import { platformClient } from "./services/platformClient";
 import type { Dataset, GoldRecipe, Lineage, Mapping, ProfileResponse, Rule } from "./types";
 
-const datasetKey = "ecommerce-v1";
+const datasetKey = "timerapp-v1";
 const tabs = ["Workspace", "Profiles", "Rules", "Mapping", "Silver", "Gold", "Lineage"] as const;
 type Tab = typeof tabs[number];
 
@@ -77,8 +77,8 @@ export function App() {
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">Dataset / {datasetKey}</p>
-          <h1>Turn source files into<br /><em>governed evidence.</em></h1>
-          <p className="hero-description">One review surface for SharePoint ingestion, Bronze profiling, rule decisions, and approved Silver and Gold outputs.</p>
+          <h1>Turn TimerApp rows into<br /><em>governed evidence.</em></h1>
+          <p className="hero-description">One review surface for existing SharePoint lists, immutable Dataverse Bronze, rule decisions, and approved Silver and Gold outputs.</p>
         </div>
         <div className="hero-gauge" style={{ "--progress": `${progress * 3.6}deg` } as React.CSSProperties}>
           <div><strong>{progress}%</strong><span>workflow complete</span></div>
@@ -114,8 +114,8 @@ export function App() {
         <section className="panel">
           <header className="panel-header"><div><p className="eyebrow">Batch inventory</p><h2>Assets</h2></div></header>
           <div className="asset-list">{dataset?.assets?.map((asset) => <button key={asset.asset_key} className={selectedAsset === asset.asset_key ? "selected" : ""} onClick={() => chooseAsset(asset.asset_key)}>
-            <span className="file-icon">CSV</span><span><strong>{asset.file_name}</strong><small>{asset.row_count} rows · {asset.columns.length} columns</small></span><span>→</span>
-          </button>)}{!dataset?.assets?.length && <Empty text="Run ingestion to publish the canonical SharePoint batch." />}</div>
+            <span className="file-icon">LIST</span><span><strong>{asset.file_name.replace(/\.csv$/i, "")}</strong><small>{asset.row_count} rows · {asset.columns.length} columns</small></span><span>→</span>
+          </button>)}{!dataset?.assets?.length && <Empty text="Run ingestion to snapshot the four TimerApp lists into Dataverse." />}</div>
         </section>
         <section className="panel">
           <header className="panel-header"><div><p className="eyebrow">Review gates</p><h2>Lifecycle</h2></div></header>

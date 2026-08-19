@@ -9,14 +9,14 @@ environment and start:
 docker compose up --build
 ```
 
-Only the stateless worker and frontend preview run locally. Dataverse and
-SharePoint remain the durable services; there are no local Airflow, PostgreSQL,
+Only the stateless worker and frontend preview run locally. Dataverse and the
+existing TimerApp source remain the durable services; there are no local Airflow, PostgreSQL,
 SeaweedFS, or ClickHouse containers.
 
 ## Governed lifecycle
 
 1. Start `DQ_StartIngestion` from the Code App.
-2. Observe `dq_ingestionrun` progress and the SharePoint Bronze manifest.
+2. Observe `dq_ingestionrun`, `dq_bronzesnapshot`, and `dq_bronzerow` progress.
 3. Discover/profile, then review and execute rules.
 4. Review mappings and approve Bronze.
 5. Publish generic Silver rows, inspect rejections, and approve Silver.
@@ -27,9 +27,9 @@ SeaweedFS, or ClickHouse containers.
 ## Operational diagnosis
 
 - `401`: worker Entra credential/token audience is invalid.
-- `403` Graph: verify `Sites.Selected` and selected-site write grant.
+- `403` Graph: verify `Sites.Selected` and the TimerApp read grant.
 - `403` Dataverse: verify application user and `DQ Backend Application` role.
-- `404`: verify site, library, folder, Dataverse entity-set logical names, and
+- `404`: verify the TimerApp site/list allowlist, Dataverse entity-set logical names, and
   solution deployment.
 - `409/412`: stale Dataverse ETag; refresh before repeating review/approval.
 - `429`: respect Retry-After; the adapters retry within configured bounds.

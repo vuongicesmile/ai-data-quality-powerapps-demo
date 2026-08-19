@@ -12,19 +12,19 @@ Power Apps Code App
           FastAPI stateless worker
              |              |
              v              v
- SharePoint source     Microsoft Dataverse
- SharePoint Bronze     governance + Silver/Gold
+ TimerApp lists        Microsoft Dataverse
+                       Bronze + governance + Silver/Gold
 ```
 
 ## Ownership boundaries
 
-- Power Apps contains presentation and user intent. It never handles raw CSV.
+- Power Apps contains presentation and user intent. It never handles raw list rows.
 - Power Automate owns user-triggered orchestration, correlation, failure scope,
   and run-status updates.
-- FastAPI owns bounded CSV parsing, profiling, rule execution, transformations,
+- FastAPI owns bounded list-row normalization, profiling, rule execution, transformations,
   and reconciliation. It owns no durable state.
-- SharePoint owns source files and immutable Bronze objects/manifests.
-- Dataverse owns workflow, profiles, rules, evidence, mappings, approvals,
+- SharePoint `TimerApp` owns the four authoritative source lists.
+- Dataverse owns immutable Bronze rows, workflow, profiles, rules, evidence, mappings, approvals,
   generic Silver rows, Gold recipes/results, activity, audit, and security.
 
 ## Dataverse persistence
@@ -32,25 +32,25 @@ Power Apps Code App
 `power-platform/dataverse/schema.yaml` is the logical schema source. Records
 use alternate keys for idempotent upsert, Choice columns for lifecycle/review
 state, ETags for optimistic concurrency, and Dataverse audit on governed
-tables. Dynamic CSV payloads use bounded JSON only inside `dq_silverrow` and
-`dq_goldresult`; identifiers, hashes, relationships, status, and timestamps are
-normal columns.
+tables. Dynamic list payloads use bounded JSON inside `dq_bronzerow`,
+`dq_silverrow`, and `dq_goldresult`; identifiers, hashes, relationships,
+status, and timestamps are normal columns.
 
-## Bronze paths
+## Bronze identity
 
 ```text
-DataQualityBronze/GenericDatasets/{dataset}/batches/{batch-id}/{file}.csv
-DataQualityBronze/GenericDatasets/{dataset}/_manifests/{timestamp}.json
+dq_bronzesnapshot: one record per batch/list
+dq_bronzerow: one immutable record per batch/list/source item
 ```
 
-The manifest retains source and Bronze item IDs/eTags, SHA-256, row/column
-counts, size, batch, and publication time. An unchanged set of source versions
-returns the existing batch unless `force=true`.
+The batch retains list IDs, source item IDs/eTags, canonical SHA-256 hashes,
+row/column counts, and capture time. The batch key derives from the combined
+source versions, so an unchanged rerun upserts the same immutable records.
 
 ## Data limits
 
-This Dataverse-first variant is a governed demo: 100 files, 25 MB/file, and
-5,000 rows/file by default. Move high-volume analytical Silver/Gold to Microsoft
+This Dataverse-first variant is a governed demo: four allowlisted lists and
+5,000 rows/list/run by default. Move high-volume analytical Silver/Gold to Microsoft
 Fabric in a separate architecture; do not increase Dataverse limits silently.
 
 ## Recovery boundary

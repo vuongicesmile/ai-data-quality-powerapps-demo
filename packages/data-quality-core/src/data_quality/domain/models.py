@@ -21,6 +21,7 @@ class SourceAsset(BaseModel):
     source_version: str
     size_bytes: int = Field(ge=0)
     last_modified_at: str
+    source_web_url: str = ""
 
 
 class BronzeAsset(SourceAsset):
@@ -31,6 +32,9 @@ class BronzeAsset(SourceAsset):
     bronze_web_url: str = ""
     row_count: int = Field(default=0, ge=0)
     columns: list[str] = Field(default_factory=list)
+    source_list_id: str = ""
+    source_list_name: str = ""
+    captured_at: str = ""
 
 
 class ColumnProfile(BaseModel):
@@ -125,9 +129,9 @@ class ActivityEvent(BaseModel):
 
 class WorkflowState(BaseModel):
     dataset_key: str
-    dataset_id: str = "sales.orders"
-    dataset_name: str = "E-commerce Data Quality"
-    provider: str = "sharepoint"
+    dataset_id: str = "timerapp.projects"
+    dataset_name: str = "TimerApp Data Quality"
+    provider: str = "sharepoint-list"
     revision: int = 0
     status: str = "EMPTY"
     selected_asset_key: str | None = None

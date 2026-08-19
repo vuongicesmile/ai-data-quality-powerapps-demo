@@ -9,6 +9,7 @@ from data_quality.config import Settings, get_settings
 from data_quality.domain.ports import DatasetSource
 from data_quality.integrations.dataverse import (
     DataverseAuth,
+    DataverseBronzeStore,
     DataverseClient,
     DataverseStateRepository,
     DataverseWarehouseRepository,
@@ -17,8 +18,7 @@ from data_quality.integrations.local_source import LocalDatasetSource
 from data_quality.integrations.microsoft_graph import (
     MicrosoftGraphAuth,
     MicrosoftGraphClient,
-    SharePointBronzeStore,
-    SharePointDatasetSource,
+    SharePointListDatasetSource,
 )
 
 
@@ -36,7 +36,7 @@ def get_graph() -> MicrosoftGraphClient:
         auth,
         timeout_seconds=settings.graph_timeout_seconds,
         max_retries=settings.graph_max_retries,
-        maximum_items=settings.source_max_files,
+        maximum_items=settings.source_max_rows,
         maximum_download_bytes=settings.source_max_file_bytes,
     )
 
@@ -48,25 +48,20 @@ def get_source() -> DatasetSource:
         return LocalDatasetSource(
             settings.local_dataset_path, maximum_bytes=settings.source_max_file_bytes
         )
-    return SharePointDatasetSource(
+    return SharePointListDatasetSource(
         get_graph(),
         hostname=settings.sharepoint_host,
         site_path=settings.sharepoint_site_path,
-        library=settings.sharepoint_library,
-        folder=settings.sharepoint_dataset_folder,
+        list_names=settings.source_list_names(),
+        maximum_rows=settings.source_max_rows,
     )
 
 
 @lru_cache
-def get_bronze_store() -> SharePointBronzeStore:
+def get_bronze_store() -> DataverseBronzeStore:
     settings = get_settings()
-    return SharePointBronzeStore(
-        get_graph(),
-        hostname=settings.sharepoint_host,
-        site_path=settings.sharepoint_site_path,
-        library=settings.sharepoint_bronze_library,
-        prefix=settings.sharepoint_bronze_prefix,
-        maximum_bytes=settings.source_max_file_bytes,
+    return DataverseBronzeStore(
+        get_dataverse(),
         maximum_rows=settings.source_max_rows,
     )
 
