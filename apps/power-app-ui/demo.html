@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Data Quality Workspace</title>
+    <style>
+        :root {
+            --primary: #0078D4;
+            --primary-hover: #106EBE;
+            --primary-light: #EFF6FC;
+            --text-main: #201F1E;
+            --text-secondary: #605E5C;
+            --text-tertiary: #8A8886;
+            --bg-app: #FAFAFA;
+            --bg-card: #FFFFFF;
+            --border: #EDEBE9;
+            --border-dark: #D2D0CE;
+            --success: #107C10;
+            --success-bg: #DFF6DD;
+            --warning: #FFA500;
+            --warning-bg: #FFF4CE;
+            --danger: #D13438;
+            --danger-bg: #FDE7E9;
+            --info: #0078D4;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 2px 4px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-lg: 0 4px 8px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            font-size: 14px;
+            line-height: 1.5;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary), #005A9E);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .sidebar-title { font-size: 15px; font-weight: 600; color: var(--text-main); }
+        .sidebar-subtitle { font-size: 11px; color: var(--text-tertiary); }
+
+        .nav-menu {
+            padding: 16px 0;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover { background-color: var(--bg-app); color: var(--text-main); }
+        .nav-item.active { background-color: var(--primary-light); color: var(--primary); font-weight: 600; border-left-color: var(--primary); }
+
+        .nav-icon { width: 24px; margin-right: 12px; text-align: center; }
+
+        .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+        .role-selector label { font-size: 11px; text-transform: uppercase; color: var(--text-tertiary); font-weight: 600; display: block; margin-bottom: 6px; }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-dark);
+            border-radius: 2px;
+            background-color: white;
+            font-family: inherit;
+            font-size: 13px;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .top-bar {
+            height: 48px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .breadcrumb { font-size: 13px; color: var(--text-tertiary); }
+        .breadcrumb b { color: var(--text-main); font-weight: 600; }
+
+        .top-actions { display: flex; align-items: center; gap: 12px; }
+
+        .btn {
+            padding: 6px 16px;
+            border-radius: 2px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: inherit;
+        }
+
+        .btn-primary { background-color: var(--primary); color: white; border-color: var(--primary); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:disabled { background-color: var(--border-dark); border-color: var(--border-dark); cursor: not-allowed; }
+
+        .btn-outline { background-color: white; color: var(--text-main); border-color: var(--border-dark); }
+        .btn-outline:hover { background-color: var(--bg-app); }
+
+        .btn-text { background: none; border: none; color: var(--primary); font-weight: 600; }
+        .btn-text:hover { text-decoration: underline; }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            position: relative;
+        }
+
+        /* --- GENERIC UI ELEMENTS --- */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title { font-size: 15px; font-weight: 600; color: var(--text-main); }
+        .card-body { padding: 20px; }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            background-color: var(--bg-app);
+            color: var(--text-secondary);
+        }
+        .badge-primary { background-color: var(--primary-light); color: var(--primary); }
+        .badge-success { background-color: var(--success-bg); color: var(--success); }
+        .badge-warning { background-color: var(--warning-bg); color: #8A6100; }
+        .badge-danger { background-color: var(--danger-bg); color: var(--danger); }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 2px;
+            font-size: 11px;
+            font-weight: 600;
+            background-color: var(--bg-app);
+            color: var(--text-secondary);
+        }
+        .status-pill::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            background-color: var(--text-tertiary);
+        }
+        .status-pill.running::before { background-color: var(--primary); animation: pulse 1.5s infinite; }
+        .status-pill.waiting::before { background-color: var(--warning); }
+        .status-pill.approved::before { background-color: var(--success); }
+        .status-pill.rejected::before { background-color: var(--danger); }
+        .status-pill.failed::before { background-color: var(--danger); }
+        .status-pill.completed::before { background-color: var(--success); }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0.6; transform: scale(0.8); }
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border-dark); color: var(--text-secondary); font-weight: 600; background-color: var(--bg-app); }
+        td { padding: 12px; border-bottom: 1px solid var(--border); color: var(--text-main); }
+        tr:hover td { background-color: var(--primary-light); cursor: pointer; }
+
+        .input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-dark);
+            border-radius: 2px;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        .input:focus { outline: 1px solid var(--primary); border-color: var(--primary); }
+
+        /* --- VIEWS --- */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        .page-header {
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .page-title { font-size: 24px; font-weight: 600; color: var(--text-main); margin-bottom: 4px; }
+        .page-subtitle { font-size: 14px; color: var(--text-secondary); }
+
+        .grid { display: grid; gap: 20px; }
+        .grid-4 { grid-template-columns: repeat(4, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+
+        .kpi-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+        .kpi-label { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+        .kpi-value { font-size: 24px; font-weight: 600; color: var(--text-main); }
+
+        /* --- LIFECYCLE STEPPER --- */
+        .stepper {
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+            background-color: var(--bg-card);
+            padding: 16px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+        }
+        .step { display: flex; align-items: center; color: var(--text-tertiary); font-size: 12px; font-weight: 600; white-space: nowrap; }
+        .step-icon {
+            width: 24px; height: 24px; border-radius: 50%;
+            background-color: var(--bg-app); border: 1px solid var(--border-dark);
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 8px; font-size: 12px; color: var(--text-tertiary);
+        }
+        .step.completed .step-icon { background-color: var(--success); color: white; border-color: var(--success); }
+        .step.current .step-icon { background-color: var(--primary); color: white; border-color: var(--primary); }
+        .step.current { color: var(--primary); }
+        .step-line { flex: 1; height: 1px; background-color: var(--border-dark); margin: 0 12px; }
+        .step.completed + .step-line { background-color: var(--success); }
+
+        /* --- MAPPING --- */
+        .mapping-container { display: grid; grid-template-columns: 1fr 60px 1fr; gap: 0; margin-top: 16px; }
+        .mapping-col { background: var(--bg-app); border: 1px solid var(--border); border-radius: 4px; padding: 12px; min-height: 300px; }
+        .mapping-arrow { display: flex; align-items: center; justify-content: center; color: var(--text-tertiary); font-size: 18px; }
+        .mapping-item { background: white; padding: 8px; border: 1px solid var(--border); border-radius: 2px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+
+        /* --- TIMELINE --- */
+        .timeline { position: relative; padding-left: 24px; }
+        .timeline::before { content: ''; position: absolute; left: 7px; top: 4px; bottom: 4px; width: 2px; background-color: var(--border); }
+        .timeline-item { position: relative; margin-bottom: 24px; }
+        .timeline-dot { position: absolute; left: -22px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background-color: var(--primary); border: 2px solid white; box-shadow: 0 0 0 1px var(--primary); }
+        .timeline-time { font-size: 11px; color: var(--text-tertiary); font-weight: 600; }
+        .timeline-title { font-size: 14px; font-weight: 600; color: var(--text-main); margin: 2px 0; }
+        .timeline-desc { font-size: 13px; color: var(--text-secondary); }
+
+        /* --- DRAWER --- */
+        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.4); z-index: 100; display: none; }
+        .overlay.active { display: block; }
+
+        .drawer {
+            position: fixed; top: 0; right: 0; width: 480px; height: 100vh;
+            background-color: white; box-shadow: -4px 0 8px rgba(0,0,0,0.1);
+            z-index: 101; transform: translateX(100%); transition: transform 0.3s ease;
+            display: flex; flex-direction: column;
+        }
+        .drawer.active { transform: translateX(0); }
+        .drawer-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .drawer-body { flex: 1; padding: 24px; overflow-y: auto; }
+
+        /* --- MODAL --- */
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background-color: white; box-shadow: var(--shadow-lg); border-radius: 4px;
+            z-index: 102; width: 500px; max-width: 90%; display: none;
+        }
+        .modal.active { display: block; }
+        .modal-header { padding: 16px 24px; border-bottom: 1px solid var(--border); }
+        .modal-body { padding: 24px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+        /* --- PROGRESS BAR --- */
+        .progress-bar { width: 100%; height: 6px; background-color: var(--border); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; background-color: var(--primary); width: 0%; transition: width 0.3s ease; }
+
+        /* --- TABS --- */
+        .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+        .tab { padding: 10px 16px; cursor: pointer; color: var(--text-secondary); font-weight: 600; font-size: 13px; border-bottom: 2px solid transparent; }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* --- MISC --- */
+        .json-view { background-color: var(--bg-app); padding: 12px; border-radius: 4px; font-family: monospace; font-size: 12px; color: var(--text-secondary); white-space: pre-wrap; }
+        .checklist-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .checklist-item:last-child { border-bottom: none; }
+        .check-icon { width: 18px; height: 18px; margin-right: 12px; color: var(--success); }
+
+        .toast {
+            position: fixed; bottom: 24px; right: 24px;
+            background-color: var(--text-main); color: white; padding: 12px 20px;
+            border-radius: 4px; box-shadow: var(--shadow-lg); z-index: 200;
+            opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        .error-banner { background-color: var(--danger-bg); border-left: 4px solid var(--danger); padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .error-banner-content { flex: 1; }
+        .error-banner-title { color: var(--danger); font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+
+        /* --- WORKFLOW NAVIGATION --- */
+        .workflow-nav {
+            margin-top: 32px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .workflow-step-info { color: var(--text-secondary); font-size: 13px; }
+        .back-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--primary); font-weight: 600; cursor: pointer;
+            margin-bottom: 12px; font-size: 13px;
+        }
+
+        /* --- CHAT BUBBLE --- */
+        .chat-bubble {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            box-shadow: var(--shadow-lg);
+            cursor: pointer;
+            z-index: 90;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .chat-bubble:hover { transform: scale(1.05); background-color: var(--primary-hover); }
+        .chat-bubble svg { width: 28px; height: 28px; fill: white; }
+
+        .chat-window {
+            position: fixed;
+            bottom: 96px;
+            right: 24px;
+            width: 360px;
+            height: 500px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            z-index: 95;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .chat-window.active { display: flex; }
+
+        .chat-header {
+            background-color: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header span { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+        .chat-close-btn { background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 0; }
+
+        .chat-body {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background-color: var(--bg-app);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .chat-message.bot {
+            background-color: white;
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 2px;
+            align-self: flex-start;
+        }
+        .chat-message.user {
+            background-color: var(--primary);
+            color: white;
+            border-bottom-right-radius: 2px;
+            align-self: flex-end;
+        }
+
+        .chat-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .chat-suggestion-btn {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .chat-suggestion-btn:hover { background-color: var(--primary); color: white; }
+
+        .chat-input-area {
+            padding: 12px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            background-color: white;
+        }
+        .chat-input {
+            flex: 1;
+            border: 1px solid var(--border-dark);
+            border-radius: 20px;
+            padding: 8px 14px;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+        }
+        .chat-input:focus { border-color: var(--primary); }
+        .chat-send-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .chat-send-btn:hover { background-color: var(--primary-hover); }
+        .chat-send-btn svg { width: 18px; height: 18px; fill: white; }
+
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon">AI</div>
+            <div>
+                <div class="sidebar-title">Data Quality</div>
+                <div class="sidebar-subtitle">Governed Workflow</div>
+            </div>
+        </div>
+        <nav class="nav-menu">
+            <div class="nav-item active" onclick="navigate('workspace')"><span class="nav-icon">🏠</span> Workspace</div>
+            <div class="nav-item" onclick="navigate('ingestion')"><span class="nav-icon">🔄</span> Ingestion Runs</div>
+            <div class="nav-item" onclick="navigate('profiles')"><span class="nav-icon">📊</span> Profiles</div>
+            <div class="nav-item" onclick="navigate('rules')"><span class="nav-icon">📐</span> Rules & Evidence</div>
+            <div class="nav-item" onclick="navigate('bronze_approval')"><span class="nav-icon">✅</span> Bronze Approval</div>
+            <div class="nav-item" onclick="navigate('mapping')"><span class="nav-icon">🔗</span> Mapping</div>
+            <div class="nav-item" onclick="navigate('silver')"><span class="nav-icon">🥈</span> Silver</div>
+            <div class="nav-item" onclick="navigate('gold')"><span class="nav-icon">🥇</span> Gold</div>
+            <div class="nav-item" onclick="navigate('activity')"><span class="nav-icon">📜</span> Activity</div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="role-selector">
+                <label>Simulate Role</label>
+                <select id="roleSelector" onchange="changeRole(this.value)">
+                    <option value="Administrator">Administrator</option>
+                    <option value="Operator">Operator</option>
+                </select>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+        <div class="top-bar">
+            <div class="breadcrumb">AI Data Quality Workspace / <b id="currentPageTitle">Workspace</b></div>
+            <div class="top-actions">
+                <select class="input" style="width: 200px;">
+                    <option>TimerApp Projects</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="content">
+
+            <!-- VIEW: WORKSPACE -->
+            <div id="view-workspace" class="view active">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">AI Data Quality Workspace</div>
+                        <div class="page-subtitle">Governed data-quality workflow for TimerApp SharePoint lists</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openRunModal()">▶ Run Data Quality Check</button>
+                </div>
+
+                <div class="grid grid-4">
+                    <div class="kpi-card"><div class="kpi-label">Last Run</div><div class="kpi-value">20/08/2026 10:40</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Status</div><div class="kpi-value" style="font-size: 16px; display:flex; align-items:center; gap:8px;"><span class="status-pill waiting">WAITING_REVIEW</span></div></div>
+                    <div class="kpi-card"><div class="kpi-label">Assets</div><div class="kpi-value">4</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Bronze Rows</div><div class="kpi-value">19,482</div></div>
+                </div>
+                <div style="height: 20px;"></div>
+                <div class="grid grid-4">
+                    <div class="kpi-card"><div class="kpi-label">Quality Score</div><div class="kpi-value">91%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Approved Rules</div><div class="kpi-value">7</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Pending Rules</div><div class="kpi-value">3</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Current Step</div><div class="kpi-value" style="font-size: 18px;">Rule Review</div></div>
+                </div>
+
+                <div class="stepper">
+                    <div class="step completed"><div class="step-icon">✓</div> Capture Bronze</div>
+                    <div class="step-line"></div>
+                    <div class="step completed"><div class="step-icon">✓</div> Profile</div>
+                    <div class="step-line"></div>
+                    <div class="step completed"><div class="step-icon">✓</div> Generate Rules</div>
+                    <div class="step-line"></div>
+                    <div class="step current"><div class="step-icon">4</div> Review Rules</div>
+                    <div class="step-line"></div>
+                    <div class="step"><div class="step-icon">5</div> Mapping</div>
+                    <div class="step-line"></div>
+                    <div class="step"><div class="step-icon">6</div> Silver</div>
+                    <div class="step-line"></div>
+                    <div class="step"><div class="step-icon">7</div> Gold</div>
+                </div>
+
+                <div class="grid grid-3" style="margin-top: 20px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">SharePoint Sources</div>
+                            <span class="badge badge-success">4 Healthy</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="margin-bottom: 12px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><strong>TimerList_AllProject01</strong><span class="status-pill approved">Healthy</span></div>
+                                <div style="font-size:12px; color:var(--text-secondary);">4,831 rows · Captured 10:35</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><strong>TimerList_AllProject02</strong><span class="status-pill approved">Healthy</span></div>
+                                <div style="font-size:12px; color:var(--text-secondary);">5,102 rows · Captured 10:35</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><strong>TimerList_AllProject03</strong><span class="status-pill approved">Healthy</span></div>
+                                <div style="font-size:12px; color:var(--text-secondary);">4,950 rows · Captured 10:35</div>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><strong>TimerList_AllProject04</strong><span class="status-pill approved">Healthy</span></div>
+                                <div style="font-size:12px; color:var(--text-secondary);">4,599 rows · Captured 10:35</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Data Quality Profiles</div>
+                            <button class="btn btn-text" onclick="navigate('profiles')">View All</button>
+                        </div>
+                        <div class="card-body">
+                            <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>ProjectName</span> <span>95%</span></div><div class="progress-bar"><div class="progress-fill" style="width: 95%; background-color: var(--success);"></div></div></div>
+                            <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Customer</span> <span>93%</span></div><div class="progress-bar"><div class="progress-fill" style="width: 93%; background-color: var(--success);"></div></div></div>
+                            <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>StartDate</span> <span>96%</span></div><div class="progress-bar"><div class="progress-fill" style="width: 96%; background-color: var(--success);"></div></div></div>
+                            <div style="margin-bottom: 12px;"><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Budget</span> <span>88%</span></div><div class="progress-bar"><div class="progress-fill" style="width: 88%; background-color: var(--warning);"></div></div></div>
+                            <div><div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;"><span>Email</span> <span>82%</span></div><div class="progress-bar"><div class="progress-fill" style="width: 82%; background-color: var(--danger);"></div></div></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">AI Suggested Rules</div>
+                            <span class="badge badge-primary">Review Required</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="padding: 8px; border: 1px solid var(--border); border-radius: 2px; margin-bottom: 8px;">
+                                <div style="font-weight: 600; font-size: 13px;">Email must be valid format</div>
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Confidence: 96% · Severity: High</div>
+                            </div>
+                            <div style="padding: 8px; border: 1px solid var(--border); border-radius: 2px; margin-bottom: 8px;">
+                                <div style="font-weight: 600; font-size: 13px;">StartDate cannot be empty</div>
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Confidence: 99% · Severity: High</div>
+                            </div>
+                            <div style="padding: 8px; border: 1px solid var(--border); border-radius: 2px;">
+                                <div style="font-weight: 600; font-size: 13px;">Budget must be >= 0</div>
+                                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Confidence: 92% · Severity: Medium</div>
+                            </div>
+                            <button class="btn btn-text" style="margin-top: 12px; padding: 0;" onclick="navigate('rules')">Review Rules →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <div class="workflow-step-info">Current Step: 3 - Rule Review</div>
+                    <button class="btn btn-primary" onclick="navigate('rules')">Next Step: Review Rules →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: INGESTION RUNS -->
+            <div id="view-ingestion" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="page-title">Ingestion Runs</div>
+                        <div class="page-subtitle">History of data capture and processing runs</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openRunModal()">▶ Run Data Quality Check</button>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="padding: 0;">
+                        <table>
+                            <thead>
+                                <tr><th>Run ID</th><th>Dataset</th><th>Started At</th><th>Assets</th><th>Rows</th><th>Status</th><th>Progress</th><th>Triggered By</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr onclick="navigate('ingestion_detail')">
+                                    <td style="color:var(--primary); font-weight:600;">8f3a1c7d</td><td>TimerApp Projects</td><td>20/08/2026 10:35</td><td>4</td><td>19,482</td>
+                                    <td><span class="status-pill waiting">WAITING_REVIEW</span></td><td>75%</td><td>Alex Dev</td>
+                                    <td><button class="btn btn-text" onclick="event.stopPropagation(); navigate('ingestion_detail')">View</button></td>
+                                </tr>
+                                <tr>
+                                    <td style="color:var(--primary); font-weight:600;">7a2b9c8e</td><td>TimerApp Projects</td><td>19/08/2026 14:20</td><td>4</td><td>19,450</td>
+                                    <td><span class="status-pill completed">COMPLETED</span></td><td>100%</td><td>System</td>
+                                    <td><button class="btn btn-text">View</button></td>
+                                </tr>
+                                <tr>
+                                    <td style="color:var(--primary); font-weight:600;">6c1d8e9f</td><td>TimerApp Projects</td><td>18/08/2026 09:15</td><td>4</td><td>0</td>
+                                    <td><span class="status-pill failed">FAILED</span></td><td>20%</td><td>Alex Dev</td>
+                                    <td><button class="btn btn-text">View</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('workspace')">← Back to Workspace</button>
+                    <button class="btn btn-primary" onclick="navigate('profiles')">Next Step: View Profiles →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: INGESTION DETAIL -->
+            <div id="view-ingestion_detail" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="back-link" onclick="navigate('ingestion')">← Back to Runs</div>
+                        <div class="page-title">Run 8f3a1c7d</div>
+                        <div class="page-subtitle">TimerApp Projects ingestion details</div>
+                    </div>
+                    <span class="status-pill waiting">WAITING_REVIEW</span>
+                </div>
+
+                <div class="grid grid-4">
+                    <div class="kpi-card"><div class="kpi-label">Dataset</div><div class="kpi-value" style="font-size:14px;">TimerApp Projects</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Started</div><div class="kpi-value" style="font-size:14px;">20/08 10:35</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Completed</div><div class="kpi-value" style="font-size:14px;">20/08 10:40</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Duration</div><div class="kpi-value" style="font-size:14px;">5m 12s</div></div>
+                </div>
+                <div style="height: 20px;"></div>
+                <div class="grid grid-4">
+                    <div class="kpi-card"><div class="kpi-label">Trigger</div><div class="kpi-value" style="font-size:14px;">Manual</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Assets Captured</div><div class="kpi-value" style="font-size:14px;">4</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Bronze Rows</div><div class="kpi-value" style="font-size:14px;">19,482</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Source Hash</div><div class="kpi-value" style="font-size:12px; word-break:break-all;">a1b2c3d4e5f6...</div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><div class="card-title">Lifecycle Timeline</div></div>
+                    <div class="card-body">
+                        <div class="timeline">
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:35</div><div class="timeline-title">Run created</div><div class="timeline-desc">Triggered by Alex Dev</div></div>
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:35</div><div class="timeline-title">SharePoint source validated</div><div class="timeline-desc">4 lists verified via Microsoft Graph</div></div>
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:36</div><div class="timeline-title">4 assets captured</div><div class="timeline-desc">TimerList_AllProject01 to 04</div></div>
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:37</div><div class="timeline-title">Bronze snapshot persisted</div><div class="timeline-desc">19,482 Bronze rows persisted to Dataverse</div></div>
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:38</div><div class="timeline-title">28 columns profiled</div><div class="timeline-desc">FastAPI worker completed statistical analysis</div></div>
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:39</div><div class="timeline-title">3 AI rule suggestions generated</div><div class="timeline-desc">AI Service analyzed profiling metrics</div></div>
+                            <div class="timeline-item"><div class="timeline-dot" style="background-color: var(--warning); box-shadow: 0 0 0 1px var(--warning);"></div><div class="timeline-time">10:40</div><div class="timeline-title">Waiting for rule review</div><div class="timeline-desc">Reviewer action required</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body" style="padding-bottom: 0;">
+                        <div class="tabs">
+                            <div class="tab active" onclick="switchTab(event, 'tab-overview')">Overview</div>
+                            <div class="tab" onclick="switchTab(event, 'tab-assets')">Assets</div>
+                            <div class="tab" onclick="switchTab(event, 'tab-bronze')">Bronze</div>
+                            <div class="tab" onclick="switchTab(event, 'tab-profiles')">Profiles</div>
+                            <div class="tab" onclick="switchTab(event, 'tab-activity')">Activity</div>
+                        </div>
+
+                        <div id="tab-overview" class="tab-content active" style="padding-bottom: 20px;">
+                            <p>This run successfully captured 4 assets from the TimerApp SharePoint lists. The Bronze layer is immutable and ready for review. AI has generated 3 rule suggestions based on profiling anomalies.</p>
+                        </div>
+                        <div id="tab-assets" class="tab-content" style="padding-bottom: 20px;">
+                            <table>
+                                <thead><tr><th>Asset Name</th><th>Rows</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    <tr><td>TimerList_AllProject01</td><td>4,831</td><td><span class="status-pill approved">CAPTURED</span></td></tr>
+                                    <tr><td>TimerList_AllProject02</td><td>5,102</td><td><span class="status-pill approved">CAPTURED</span></td></tr>
+                                    <tr><td>TimerList_AllProject03</td><td>4,950</td><td><span class="status-pill approved">CAPTURED</span></td></tr>
+                                    <tr><td>TimerList_AllProject04</td><td>4,599</td><td><span class="status-pill approved">CAPTURED</span></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="tab-bronze" class="tab-content" style="padding-bottom: 20px;"><button class="btn btn-outline" onclick="navigate('bronze')">View Bronze Snapshots →</button></div>
+                        <div id="tab-profiles" class="tab-content" style="padding-bottom: 20px;"><button class="btn btn-outline" onclick="navigate('profiles')">View Profiles →</button></div>
+                        <div id="tab-activity" class="tab-content" style="padding-bottom: 20px;"><button class="btn btn-outline" onclick="navigate('activity')">View Activity →</button></div>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('ingestion')">← Back to Runs</button>
+                    <button class="btn btn-primary" onclick="navigate('bronze')">Next Step: Inspect Bronze →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: BRONZE -->
+            <div id="view-bronze" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="back-link" onclick="navigate('ingestion_detail')">← Back to Ingestion Detail</div>
+                        <div class="page-title">Bronze Layer</div>
+                        <div class="page-subtitle">Immutable raw snapshots</div>
+                    </div>
+                </div>
+
+                <div class="error-banner" style="background-color: var(--primary-light); border-left-color: var(--primary);">
+                    <div class="error-banner-content">
+                        <div class="error-banner-title" style="color: var(--primary);">ℹ️ Architecture Note</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">Bronze snapshots are immutable. Raw SharePoint rows are never loaded in the browser. Data flows via Power Automate → Worker → Dataverse.</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-4">
+                    <div class="kpi-card"><div class="kpi-label">Batch ID</div><div class="kpi-value" style="font-size:14px;">B-20260820</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Snapshot Version</div><div class="kpi-value" style="font-size:14px;">v1.0</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Assets</div><div class="kpi-value" style="font-size:14px;">4</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Rows</div><div class="kpi-value" style="font-size:14px;">19,482</div></div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header"><div class="card-title">Asset Inventory</div></div>
+                    <div class="card-body" style="padding: 0;">
+                        <table>
+                            <thead>
+                                <tr><th>Asset</th><th>Rows</th><th>Columns</th><th>Snapshot Hash</th><th>Captured At</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr onclick="showBronzeDetail('TimerList_AllProject01', 4831)">
+                                    <td>TimerList_AllProject01</td><td>4,831</td><td>7</td><td style="font-family:monospace; font-size:11px;">f8a9...</td><td>20/08 10:35</td>
+                                    <td><span class="status-pill approved">PERSISTED</span></td>
+                                    <td><button class="btn btn-text">Inspect</button></td>
+                                </tr>
+                                <tr onclick="showBronzeDetail('TimerList_AllProject02', 5102)">
+                                    <td>TimerList_AllProject02</td><td>5,102</td><td>7</td><td style="font-family:monospace; font-size:11px;">b3c1...</td><td>20/08 10:35</td>
+                                    <td><span class="status-pill approved">PERSISTED</span></td>
+                                    <td><button class="btn btn-text">Inspect</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="bronze-detail-container" style="margin-top: 20px; display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Asset Detail: <span id="bronzeAssetName"></span></div>
+                            <button class="btn btn-text" onclick="closeBronzeDetail()">Close</button>
+                        </div>
+                        <div class="card-body" style="padding: 0;">
+                            <table>
+                                <thead>
+                                    <tr><th>Source Row</th><th>Source Item ID</th><th>eTag</th><th>Row Hash</th><th>Captured At</th><th>Payload</th></tr>
+                                </thead>
+                                <tbody id="bronzeRowsTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('ingestion_detail')">← Back to Run Detail</button>
+                    <button class="btn btn-primary" onclick="navigate('profiles')">Next Step: View Profiles →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: PROFILES -->
+            <div id="view-profiles" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="back-link" onclick="navigate('bronze')">← Back to Bronze</div>
+                        <div class="page-title">Data Quality Profiles</div>
+                        <div class="page-subtitle">Statistical analysis of Bronze layer</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="grid grid-4" style="margin-bottom: 16px;">
+                            <div><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">Asset</label><select class="input"><option>All Assets</option><option>TimerList_AllProject01</option></select></div>
+                            <div><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">Column Type</label><select class="input"><option>All Types</option><option>Text</option><option>Date</option><option>Number</option></select></div>
+                            <div><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">Quality Range</label><select class="input"><option>All</option><option>0-80%</option><option>80-100%</option></select></div>
+                            <div><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">Issue Type</label><select class="input"><option>All</option><option>Nulls</option><option>Duplicates</option></select></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-3" style="margin-bottom: 20px;">
+                    <div class="kpi-card"><div class="kpi-label">Columns</div><div class="kpi-value">28</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Rows Profiled</div><div class="kpi-value">19,482</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Overall Quality</div><div class="kpi-value" style="color: var(--success);">91%</div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><div class="card-title">Column Profiles</div></div>
+                    <div class="card-body" style="padding: 0;">
+                        <table>
+                            <thead>
+                                <tr><th>Column</th><th>Detected Type</th><th>Semantic Type</th><th>Null %</th><th>Unique %</th><th>Min</th><th>Max</th><th>Quality</th><th>Issues</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr onclick="openProfileModal('ProjectName', 'Text', 'Project Name', '95%', '12')">
+                                    <td>ProjectName</td><td>Text</td><td><span class="badge badge-primary">Project Name</span></td><td>1.2%</td><td>98.3%</td><td>-</td><td>-</td><td style="color:var(--success); font-weight:600;">95%</td><td><span class="badge badge-warning">12</span></td>
+                                </tr>
+                                <tr onclick="openProfileModal('Customer', 'Text', 'Organization', '93%', '24')">
+                                    <td>Customer</td><td>Text</td><td><span class="badge badge-primary">Organization</span></td><td>2.4%</td><td>94.1%</td><td>-</td><td>-</td><td style="color:var(--success); font-weight:600;">93%</td><td><span class="badge badge-warning">24</span></td>
+                                </tr>
+                                <tr onclick="openProfileModal('StartDate', 'Date', 'Date', '96%', '4')">
+                                    <td>StartDate</td><td>Date</td><td><span class="badge badge-primary">Date</span></td><td>0.3%</td><td>91.8%</td><td>2024-01-01</td><td>2026-08-20</td><td style="color:var(--success); font-weight:600;">96%</td><td><span class="badge badge-warning">4</span></td>
+                                </tr>
+                                <tr onclick="openProfileModal('Budget', 'Number', 'Currency', '88%', '37')">
+                                    <td>Budget</td><td>Number</td><td><span class="badge badge-primary">Currency</span></td><td>1.1%</td><td>90.5%</td><td>0</td><td>2500000</td><td style="color:var(--warning); font-weight:600;">88%</td><td><span class="badge badge-warning">37</span></td>
+                                </tr>
+                                <tr onclick="openProfileModal('Email', 'Text', 'Email', '82%', '76')">
+                                    <td>Email</td><td>Text</td><td><span class="badge badge-primary">Email</span></td><td>5.3%</td><td>89.2%</td><td>-</td><td>-</td><td style="color:var(--danger); font-weight:600;">82%</td><td><span class="badge badge-danger">76</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('bronze')">← Back to Bronze</button>
+                    <button class="btn btn-primary" onclick="navigate('rules')">Next Step: Review Rules →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: RULES -->
+            <div id="view-rules" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="back-link" onclick="navigate('profiles')">← Back to Profiles</div>
+                        <div class="page-title">Rules & Evidence</div>
+                        <div class="page-subtitle">AI-generated data quality rules</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body" style="padding-bottom: 0;">
+                        <div class="tabs">
+                            <div class="tab active" onclick="switchTab(event, 'tab-pending')">Pending Review (3)</div>
+                            <div class="tab" onclick="switchTab(event, 'tab-approved')">Approved (7)</div>
+                            <div class="tab" onclick="switchTab(event, 'tab-rejected')">Rejected (1)</div>
+                            <div class="tab" onclick="switchTab(event, 'tab-all')">All Rules</div>
+                        </div>
+
+                        <div id="tab-pending" class="tab-content active" style="padding-bottom: 20px;">
+                            <div class="card" style="box-shadow: none; border: 1px solid var(--border);">
+                                <div class="card-header" style="background-color: var(--bg-app);">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <span class="badge badge-danger">High Severity</span>
+                                        <div class="card-title">Email must be valid format</div>
+                                    </div>
+                                    <span class="badge badge-primary">AI Suggested (96% Conf.)</span>
+                                </div>
+                                <div class="card-body">
+                                    <p style="margin-bottom: 16px;">Column semantic type and samples indicate email addresses. Found 76 violations in Bronze sample.</p>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-primary" onclick="approveRule(this)">Approve</button>
+                                        <button class="btn btn-outline" onclick="openEditRuleModal()">Edit</button>
+                                        <button class="btn btn-outline" onclick="openRejectModal()">Reject</button>
+                                        <button class="btn btn-text" onclick="openEvidenceDrawer()">View Evidence →</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card" style="box-shadow: none; border: 1px solid var(--border);">
+                                <div class="card-header" style="background-color: var(--bg-app);">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <span class="badge badge-danger">High Severity</span>
+                                        <div class="card-title">StartDate cannot be empty</div>
+                                    </div>
+                                    <span class="badge badge-primary">AI Suggested (99% Conf.)</span>
+                                </div>
+                                <div class="card-body">
+                                    <p style="margin-bottom: 16px;">Critical project timeline field. Found 4 nulls in Bronze sample.</p>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-primary" onclick="approveRule(this)">Approve</button>
+                                        <button class="btn btn-outline" onclick="openEditRuleModal()">Edit</button>
+                                        <button class="btn btn-outline" onclick="openRejectModal()">Reject</button>
+                                        <button class="btn btn-text" onclick="openEvidenceDrawer()">View Evidence →</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card" style="box-shadow: none; border: 1px solid var(--border);">
+                                <div class="card-header" style="background-color: var(--bg-app);">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <span class="badge badge-warning">Medium Severity</span>
+                                        <div class="card-title">Budget must be numeric and >= 0</div>
+                                    </div>
+                                    <span class="badge badge-primary">AI Suggested (92% Conf.)</span>
+                                </div>
+                                <div class="card-body">
+                                    <p style="margin-bottom: 16px;">Budget represents project funding. Negative values detected in 3 rows.</p>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button class="btn btn-primary" onclick="approveRule(this)">Approve</button>
+                                        <button class="btn btn-outline" onclick="openEditRuleModal()">Edit</button>
+                                        <button class="btn btn-outline" onclick="openRejectModal()">Reject</button>
+                                        <button class="btn btn-text" onclick="openEvidenceDrawer()">View Evidence →</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="tab-approved" class="tab-content" style="padding-bottom: 20px;">
+                            <table>
+                                <tr><td>CustomerName is required</td><td><span class="badge badge-success">APPROVED</span></td></tr>
+                                <tr><td>Status must be in ['Active', 'Closed', 'On Hold']</td><td><span class="badge badge-success">APPROVED</span></td></tr>
+                            </table>
+                        </div>
+                        <div id="tab-rejected" class="tab-content" style="padding-bottom: 20px;">
+                             <table>
+                                <tr><td>EndDate must be after StartDate</td><td><span class="badge badge-danger">REJECTED</span></td><td>False positives on legacy data</td></tr>
+                            </table>
+                        </div>
+                        <div id="tab-all" class="tab-content" style="padding-bottom: 20px;">Displaying all rules...</div>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('profiles')">← Back to Profiles</button>
+                    <button class="btn btn-primary" onclick="navigate('bronze_approval')">Next Step: Approve Bronze →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: BRONZE APPROVAL -->
+            <div id="view-bronze_approval" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="back-link" onclick="navigate('rules')">← Back to Rules</div>
+                        <div class="page-title">Bronze Approval</div>
+                        <div class="page-subtitle">Governance checkpoint for raw data layer</div>
+                    </div>
+                    <span id="bronzeStatusPill" class="status-pill waiting">PENDING REVIEW</span>
+                </div>
+
+                <div class="grid grid-3">
+                    <div class="kpi-card"><div class="kpi-label">Assets</div><div class="kpi-value">4</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Rows</div><div class="kpi-value">19,482</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Columns Profiled</div><div class="kpi-value">28</div></div>
+                </div>
+                <div style="height: 20px;"></div>
+                <div class="grid grid-3">
+                    <div class="kpi-card"><div class="kpi-label">Quality Score</div><div class="kpi-value" style="color:var(--success);">91%</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Rules Reviewed</div><div class="kpi-value">10</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Snapshot Complete</div><div class="kpi-value" style="font-size:14px;">Yes</div></div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header"><div class="card-title">Approval Checklist</div></div>
+                    <div class="card-body">
+                        <div class="checklist-item"><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>Source inventory reconciled</div>
+                        <div class="checklist-item"><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>Snapshot hashes verified</div>
+                        <div class="checklist-item"><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>Profiling completed</div>
+                        <div class="checklist-item"><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>Rule review completed</div>
+                        <div class="checklist-item"><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>Evidence reviewed</div>
+                    </div>
+                </div>
+
+                <div class="card" id="bronzeApprovalActions">
+                    <div class="card-body" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div><strong>Decision:</strong> Approving Bronze will enable Mapping and Silver layers.</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-outline" onclick="openRejectModal('Bronze')">Reject Bronze</button>
+                            <button class="btn btn-primary" onclick="openApproveBronzeModal()">Approve Bronze</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card" id="bronzeApprovedBanner" style="display:none; border-left: 4px solid var(--success);">
+                    <div class="card-body" style="display: flex; align-items: center; gap: 12px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                        <div><strong style="color: var(--success);">BRONZE APPROVED</strong><br>Downstream Silver processing is now enabled.</div>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('rules')">← Back to Rules</button>
+                    <button class="btn btn-primary" onclick="navigate('mapping')">Next Step: Configure Mapping →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: MAPPING -->
+            <div id="view-mapping" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="back-link" onclick="navigate('bronze_approval')">← Back to Bronze Approval</div>
+                        <div class="page-title">Schema Mapping</div>
+                        <div class="page-subtitle">Map source columns to canonical schema</div>
+                    </div>
+                    <div style="display:flex; gap:12px; align-items:center;">
+                        <span class="badge badge-warning">Status: PENDING REVIEW</span>
+                        <span class="badge badge-primary">Version v3</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Column Mappings</div>
+                        <div>
+                            <button class="btn btn-outline">Edit Mapping</button>
+                            <button class="btn btn-primary" onclick="navigate('silver')">Approve Mapping</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="mapping-container">
+                            <div class="mapping-col">
+                                <div style="font-weight:600; margin-bottom:12px; color:var(--text-secondary); text-transform:uppercase; font-size:11px;">Source Columns (Bronze)</div>
+                                <div class="mapping-item">ProjectName</div>
+                                <div class="mapping-item">Project_Name</div>
+                                <div class="mapping-item">ProjectTitle</div>
+                                <div class="mapping-item">CustomerName</div>
+                                <div class="mapping-item">StartedDate</div>
+                                <div class="mapping-item">ProjectBudget</div>
+                            </div>
+                            <div class="mapping-arrow">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                            </div>
+                            <div class="mapping-col">
+                                <div style="font-weight:600; margin-bottom:12px; color:var(--text-secondary); text-transform:uppercase; font-size:11px;">Canonical Columns (Silver)</div>
+                                <div class="mapping-item" style="justify-content: flex-start; gap: 8px;">
+                                    <span>project_name</span>
+                                    <div style="margin-left:auto; display:flex; gap:4px;">
+                                        <span class="badge badge-primary">AI Suggested</span>
+                                        <span class="badge badge-success">Approved</span>
+                                    </div>
+                                </div>
+                                <div class="mapping-item" style="justify-content: flex-start; gap: 8px;"><span style="opacity: 0.5; font-size: 12px;">└─ ProjectName</span></div>
+                                <div class="mapping-item" style="justify-content: flex-start; gap: 8px;"><span style="opacity: 0.5; font-size: 12px;">└─ Project_Name</span></div>
+                                <div class="mapping-item" style="justify-content: flex-start; gap: 8px;"><span style="opacity: 0.5; font-size: 12px;">└─ ProjectTitle</span></div>
+
+                                <div class="mapping-item" style="justify-content: flex-start; gap: 8px;">
+                                    <span>customer_name</span>
+                                    <div style="margin-left:auto;"><span class="badge badge-primary">AI Suggested</span></div>
+                                </div>
+                                <div class="mapping-item" style="justify-content: flex-start; gap: 8px;">
+                                    <span>start_date</span>
+                                    <div style="margin-left:auto;"><span class="badge badge-warning">Manual</span></div>
+                                </div>
+                                <div class="mapping-item" style="justify-content: flex-start; gap: 8px;">
+                                    <span>budget</span>
+                                    <div style="margin-left:auto;"><span class="badge badge-primary">AI Suggested</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('bronze_approval')">← Back to Bronze Approval</button>
+                    <button class="btn btn-primary" onclick="navigate('silver')">Next Step: View Silver Layer →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: SILVER -->
+            <div id="view-silver" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="back-link" onclick="navigate('mapping')">← Back to Mapping</div>
+                        <div class="page-title">Silver Layer</div>
+                        <div class="page-subtitle">Normalized, validated, governed data</div>
+                    </div>
+                    <button id="approveSilverBtn" class="btn btn-primary" onclick="openApproveModal('Silver')">Approve Silver</button>
+                </div>
+
+                <div class="grid grid-4">
+                    <div class="kpi-card"><div class="kpi-label">Input Bronze Rows</div><div class="kpi-value">19,482</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Accepted</div><div class="kpi-value" style="color:var(--success);">19,221</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Rejected</div><div class="kpi-value" style="color:var(--danger);">261</div></div>
+                    <div class="kpi-card"><div class="kpi-label">Acceptance Rate</div><div class="kpi-value">98.66%</div></div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-body" style="padding-bottom: 0;">
+                        <div class="tabs">
+                            <div class="tab active" onclick="switchTab(event, 'tab-silver-accepted')">Accepted (19,221)</div>
+                            <div class="tab" onclick="switchTab(event, 'tab-silver-rejected')">Rejected (261)</div>
+                        </div>
+
+                        <div id="tab-silver-accepted" class="tab-content active" style="padding-bottom: 20px;">
+                            <table>
+                                <thead>
+                                    <tr><th>project_name</th><th>customer_name</th><th>start_date</th><th>budget</th><th>source_asset</th><th>validation_status</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Cloud Migration</td><td>Samsung</td><td>2024-05-10</td><td>$1,200,000</td><td>TimerList_AllProject01</td><td><span class="badge badge-success">VALID</span></td></tr>
+                                    <tr><td>AI Research</td><td>LG</td><td>2024-06-15</td><td>$800,000</td><td>TimerList_AllProject02</td><td><span class="badge badge-success">VALID</span></td></tr>
+                                    <tr><td>Data Platform</td><td>Intel</td><td>2024-07-01</td><td>$2,100,000</td><td>TimerList_AllProject01</td><td><span class="badge badge-success">VALID</span></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="tab-silver-rejected" class="tab-content" style="padding-bottom: 20px;">
+                            <table>
+                                <thead>
+                                    <tr><th>Source Row</th><th>Reason</th><th>Rule</th><th>Evidence</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>128</td><td>Invalid Email Format</td><td>Email must be valid format</td><td><button class="btn btn-text" onclick="openEvidenceDrawer()">View Evidence</button></td></tr>
+                                    <tr><td>441</td><td>Invalid Email Format</td><td>Email must be valid format</td><td><button class="btn btn-text" onclick="openEvidenceDrawer()">View Evidence</button></td></tr>
+                                    <tr><td>902</td><td>Null Start Date</td><td>StartDate cannot be empty</td><td><button class="btn btn-text" onclick="openEvidenceDrawer()">View Evidence</button></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('mapping')">← Back to Mapping</button>
+                    <button class="btn btn-primary" onclick="navigate('gold')">Next Step: Gold Recipes →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: GOLD -->
+            <div id="view-gold" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="back-link" onclick="navigate('silver')">← Back to Silver</div>
+                        <div class="page-title">Gold Recipes</div>
+                        <div class="page-subtitle">Business-level aggregations and summaries</div>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline" onclick="openAIGenerator()">✨ Generate Recipe with AI</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-2">
+                    <div class="card">
+                        <div class="card-header"><div class="card-title">Recipes</div></div>
+                        <div class="card-body" style="padding: 0;">
+                            <table>
+                                <tbody>
+                                    <tr onclick="selectRecipe('Customer Portfolio Summary')" style="background-color: var(--primary-light);">
+                                        <td><strong>Customer Portfolio Summary</strong></td><td><span class="badge badge-success">APPROVED</span></td>
+                                    </tr>
+                                    <tr onclick="selectRecipe('Project Delivery Summary')">
+                                        <td>Project Delivery Summary</td><td><span class="badge badge-warning">PENDING</span></td>
+                                    </tr>
+                                    <tr onclick="selectRecipe('Budget by Customer')">
+                                        <td>Budget by Customer</td><td><span class="badge badge-primary">AI SUGGESTED</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Recipe Detail: <span id="selectedRecipeName">Customer Portfolio Summary</span></div>
+                            <span class="badge badge-primary">Version 1.2</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="margin-bottom: 12px;">
+                                <strong style="font-size:12px; color:var(--text-secondary);">SOURCES</strong>
+                                <div style="margin-top: 4px;">Silver_Projects</div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong style="font-size:12px; color:var(--text-secondary);">DIMENSION</strong>
+                                <div style="margin-top: 4px;"><span class="badge badge-primary">customer_name</span></div>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <strong style="font-size:12px; color:var(--text-secondary);">MEASURES</strong>
+                                <div style="margin-top: 4px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <span class="badge">COUNT(project)</span>
+                                    <span class="badge">SUM(budget)</span>
+                                    <span class="badge">AVG(project_duration)</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px;">
+                                <button class="btn btn-outline">Edit Recipe</button>
+                                <button class="btn btn-primary" onclick="runGoldRecipe()">Run Recipe</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <div class="card-title">Gold Results: Customer Portfolio Summary</div>
+                        <span class="badge badge-success">PASSED</span>
+                    </div>
+                    <div class="card-body" style="padding: 0;">
+                        <table>
+                            <thead>
+                                <tr><th>Customer</th><th>Projects</th><th>Total Budget</th><th>Average Duration</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Samsung</td><td>34</td><td>4.2B</td><td>148 days</td></tr>
+                                <tr><td>LG</td><td>19</td><td>2.1B</td><td>113 days</td></tr>
+                                <tr><td>Intel</td><td>12</td><td>1.4B</td><td>176 days</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header"><div class="card-title">Reconciliation</div></div>
+                    <div class="card-body">
+                        <div class="grid grid-4">
+                            <div class="kpi-card" style="box-shadow:none; border:1px solid var(--border);"><div class="kpi-label">Source Silver Rows</div><div class="kpi-value" style="font-size:14px;">19,221</div></div>
+                            <div class="kpi-card" style="box-shadow:none; border:1px solid var(--border);"><div class="kpi-label">Included Rows</div><div class="kpi-value" style="font-size:14px;">19,221</div></div>
+                            <div class="kpi-card" style="box-shadow:none; border:1px solid var(--border);"><div class="kpi-label">Excluded Rows</div><div class="kpi-value" style="font-size:14px;">0</div></div>
+                            <div class="kpi-card" style="box-shadow:none; border:1px solid var(--border);"><div class="kpi-label">Result Groups</div><div class="kpi-value" style="font-size:14px;">3</div></div>
+                        </div>
+                        <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="color: var(--success); font-weight: 600;">✓ Reconciliation Status: PASSED</div>
+                            <button class="btn btn-primary" onclick="openApproveModal('Gold')">Approve Gold</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('silver')">← Back to Silver</button>
+                    <button class="btn btn-primary" onclick="navigate('activity')">Finish: View Activity →</button>
+                </div>
+            </div>
+
+            <!-- VIEW: ACTIVITY -->
+            <div id="view-activity" class="view">
+                <div class="page-header">
+                    <div>
+                        <div class="back-link" onclick="navigate('gold')">← Back to Gold</div>
+                        <div class="page-title">Activity History</div>
+                        <div class="page-subtitle">Audit log of all workflow events</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="timeline">
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:45</div><div class="timeline-title">Bronze approved</div><div class="timeline-desc">Actor: Maria Reviewer · Entity: Bronze Layer · Run: 8f3a1c7d</div></div>
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:42</div><div class="timeline-title">Email rule approved</div><div class="timeline-desc">Actor: Alex Dev · Entity: Rule 'Email must be valid format' · Run: 8f3a1c7d</div></div>
+                            <div class="timeline-item"><div class="timeline-dot" style="background-color: var(--purple); box-shadow: 0 0 0 1px var(--purple);"></div><div class="timeline-time">10:39</div><div class="timeline-title">AI generated 3 rule suggestions</div><div class="timeline-desc">Actor: AI Service · Entity: Rules · Run: 8f3a1c7d</div></div>
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:37</div><div class="timeline-title">Profiling completed</div><div class="timeline-desc">Actor: Worker · Entity: Profiles · Run: 8f3a1c7d</div></div>
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:36</div><div class="timeline-title">Bronze snapshot captured</div><div class="timeline-desc">Actor: System · Entity: Bronze Layer · Run: 8f3a1c7d</div></div>
+                            <div class="timeline-item"><div class="timeline-dot"></div><div class="timeline-time">10:35</div><div class="timeline-title">Ingestion started</div><div class="timeline-desc">Actor: Alex Dev · Entity: Run 8f3a1c7d · Run: 8f3a1c7d</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-nav">
+                    <button class="btn btn-outline" onclick="navigate('workspace')">← Back to Workspace</button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- OVERLAY FOR DRAWERS AND MODALS -->
+    <div class="overlay" id="overlay" onclick="closeAll()"></div>
+
+    <!-- DRAWER: EVIDENCE -->
+    <div class="drawer" id="evidenceDrawer">
+        <div class="drawer-header">
+            <div style="font-size: 16px; font-weight: 600;">Rule Evidence</div>
+            <button class="btn btn-text" onclick="closeAll()">✕</button>
+        </div>
+        <div class="drawer-body">
+            <div class="kpi-card" style="margin-bottom: 20px; background: var(--bg-app);">
+                <div class="kpi-label">Violation Count</div>
+                <div class="kpi-value" style="color: var(--danger);">76</div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Note: Sensitive raw data is masked.</div>
+            </div>
+
+            <h4 style="margin-bottom: 12px;">Sample Evidence</h4>
+
+            <div style="border: 1px solid var(--border); border-radius: 4px; padding: 12px; margin-bottom: 12px;">
+                <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px;">Source Row: 128</div>
+                <div style="font-family: monospace; background: var(--danger-bg); padding: 4px; border-radius: 2px; display: inline-block; margin-bottom: 8px;">test***@mail</div>
+                <div style="font-size: 12px; font-weight: 600; color: var(--danger);">INVALID_EMAIL_FORMAT</div>
+            </div>
+
+            <div style="border: 1px solid var(--border); border-radius: 4px; padding: 12px; margin-bottom: 12px;">
+                <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 4px;">Source Row: 441</div>
+                <div style="font-family: monospace; background: var(--danger-bg); padding: 4px; border-radius: 2px; display: inline-block; margin-bottom: 8px;">abc***com</div>
+                <div style="font-size: 12px; font-weight: 600; color: var(--danger);">INVALID_EMAIL_FORMAT</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DRAWER: BRONZE PAYLOAD -->
+    <div class="drawer" id="payloadDrawer">
+        <div class="drawer-header">
+            <div style="font-size: 16px; font-weight: 600;">Row Payload</div>
+            <button class="btn btn-text" onclick="closeAll()">✕</button>
+        </div>
+        <div class="drawer-body">
+            <div style="font-size: 12px; color: var(--text-tertiary); margin-bottom: 8px;">Raw SharePoint Item JSON</div>
+            <div class="json-view">
+{
+  "Id": 128,
+  "Title": "Cloud Migration",
+  "Customer": "Samsung",
+  "Budget": 1200000,
+  "Email": "test***@mail",
+  "StartDate": "2024-05-10",
+  "Status": "Active"
+}
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: RUN DATA QUALITY -->
+    <div class="modal" id="runModal" style="width: 480px;">
+        <div class="modal-header"><div style="font-size: 16px; font-weight: 600;">Start Data Quality Run</div></div>
+        <div class="modal-body" id="runModalBody">
+            <div style="margin-bottom: 16px;">
+                <label style="font-size:11px; font-weight:600; color:var(--text-secondary);">DATASET</label>
+                <div style="margin-top: 4px; font-weight: 600;">TimerApp Projects</div>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="font-size:11px; font-weight:600; color:var(--text-secondary);">SOURCES</label>
+                <div style="margin-top: 4px;">4 approved TimerApp lists</div>
+            </div>
+            <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 16px;">
+                <div>
+                    <div style="font-weight: 600;">Force recapture</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Re-read from SharePoint even if cached</div>
+                </div>
+                <label class="switch" style="position: relative; display: inline-block; width: 40px; height: 20px;">
+                    <input type="checkbox" id="forceRecapture" style="opacity: 0; width: 0; height: 0;">
+                    <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 20px;"></span>
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeAll()">Cancel</button>
+            <button class="btn btn-primary" onclick="startRun()">Start Run</button>
+        </div>
+    </div>
+
+    <!-- MODAL: APPROVE BRONZE -->
+    <div class="modal" id="approveBronzeModal">
+        <div class="modal-header"><div style="font-size: 16px; font-weight: 600;">Approve Bronze Layer?</div></div>
+        <div class="modal-body">
+            <p style="margin-bottom: 16px;">This action allows downstream Silver processing.</p>
+            <label style="font-size:11px; font-weight:600; color:var(--text-secondary);">COMMENT (OPTIONAL)</label>
+            <textarea class="input" style="margin-top: 4px; min-height: 80px; resize: vertical;"></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeAll()">Cancel</button>
+            <button class="btn btn-primary" onclick="confirmBronzeApproval()">Confirm Approval</button>
+        </div>
+    </div>
+
+    <!-- MODAL: APPROVE GENERIC (Silver/Gold) -->
+    <div class="modal" id="approveGenericModal">
+        <div class="modal-header"><div style="font-size: 16px; font-weight: 600;" id="approveGenericTitle">Approve?</div></div>
+        <div class="modal-body"><p id="approveGenericText">Are you sure you want to approve this layer?</p></div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeAll()">Cancel</button>
+            <button class="btn btn-primary" onclick="closeAll(); showToast('Approved successfully');">Confirm Approval</button>
+        </div>
+    </div>
+
+    <!-- MODAL: REJECT RULE -->
+    <div class="modal" id="rejectModal">
+        <div class="modal-header"><div style="font-size: 16px; font-weight: 600;">Reject Rule</div></div>
+        <div class="modal-body">
+            <label style="font-size:11px; font-weight:600; color:var(--text-secondary);">REJECTION REASON</label>
+            <textarea class="input" style="margin-top: 4px; min-height: 80px; resize: vertical;" placeholder="Please provide a reason for rejection..."></textarea>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeAll()">Cancel</button>
+            <button class="btn btn-primary" style="background-color: var(--danger); border-color: var(--danger);" onclick="closeAll(); showToast('Rule Rejected', 'danger');">Confirm Rejection</button>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIT RULE -->
+    <div class="modal" id="editRuleModal" style="width: 600px;">
+        <div class="modal-header"><div style="font-size: 16px; font-weight: 600;">Edit Rule</div></div>
+        <div class="modal-body">
+            <div class="grid grid-2">
+                <div style="margin-bottom: 16px;"><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">RULE NAME</label><input type="text" class="input" style="margin-top: 4px;" value="Email must be valid format"></div>
+                <div style="margin-bottom: 16px;"><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">COLUMN</label><select class="input" style="margin-top: 4px;"><option>Email</option></select></div>
+                <div style="margin-bottom: 16px;"><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">RULE TYPE</label><select class="input" style="margin-top: 4px;"><option>REGEX</option><option>NOT_NULL</option><option>RANGE</option></select></div>
+                <div style="margin-bottom: 16px;"><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">SEVERITY</label><select class="input" style="margin-top: 4px;"><option>High</option><option>Medium</option><option>Low</option></select></div>
+            </div>
+            <div style="margin-bottom: 16px;"><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">PARAMETERS (REGEX PATTERN)</label><input type="text" class="input" style="margin-top: 4px; font-family: monospace;" value="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"></div>
+            <div><label style="font-size:11px; font-weight:600; color:var(--text-secondary);">DESCRIPTION</label><textarea class="input" style="margin-top: 4px; min-height: 60px;">Column semantic type and samples indicate email addresses.</textarea></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeAll()">Cancel</button>
+            <button class="btn btn-primary" onclick="closeAll(); showToast('Rule Saved');">Save Rule</button>
+        </div>
+    </div>
+
+    <!-- MODAL: COLUMN PROFILE DETAIL -->
+    <div class="modal" id="profileModal" style="width: 600px;">
+        <div class="modal-header"><div style="font-size: 16px; font-weight: 600;">Column Profile: <span id="profileColName"></span></div></div>
+        <div class="modal-body">
+            <div class="grid grid-2" style="margin-bottom: 20px;">
+                <div class="kpi-card" style="box-shadow:none; border:1px solid var(--border);"><div class="kpi-label">Null Count</div><div class="kpi-value" style="font-size:16px;" id="profileNulls"></div></div>
+                <div class="kpi-card" style="box-shadow:none; border:1px solid var(--border);"><div class="kpi-label">Unique Count</div><div class="kpi-value" style="font-size:16px;" id="profileUniques"></div></div>
+                <div class="kpi-card" style="box-shadow:none; border:1px solid var(--border);"><div class="kpi-label">Detected Type</div><div class="kpi-value" style="font-size:16px;" id="profileDType"></div></div>
+                <div class="kpi-card" style="box-shadow:none; border:1px solid var(--border);"><div class="kpi-label">Semantic Type</div><div class="kpi-value" style="font-size:16px;" id="profileSType"></div></div>
+            </div>
+            <div class="kpi-card" style="box-shadow:none; border:1px solid var(--border); margin-bottom: 20px;">
+                <div class="kpi-label">Quality Score</div>
+                <div class="kpi-value" style="font-size:20px;" id="profileQuality"></div>
+            </div>
+
+            <h4 style="margin-bottom: 8px;">Top Values</h4>
+            <table style="margin-bottom: 20px;">
+                <thead><tr><th>Value</th><th>Frequency</th></tr></thead>
+                <tbody>
+                    <tr><td>Samsung</td><td>34%</td></tr>
+                    <tr><td>LG</td><td>19%</td></tr>
+                    <tr><td>Intel</td><td>12%</td></tr>
+                </tbody>
+            </table>
+
+            <h4 style="margin-bottom: 8px;">Recommended Rules</h4>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <span class="badge badge-primary">AI Suggested: Not Null</span>
+                <span class="badge badge-primary">AI Suggested: Standardize Case</span>
+            </div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-outline" onclick="closeAll()">Close</button></div>
+    </div>
+
+    <!-- MODAL: AI RECIPE GENERATOR -->
+    <div class="modal" id="aiRecipeModal" style="width: 600px;">
+        <div class="modal-header">
+            <div style="font-size: 16px; font-weight: 600; display:flex; align-items:center; gap:8px;"><span style="font-size: 18px;">✨</span> Generate Gold Recipe with AI</div>
+        </div>
+        <div class="modal-body" id="aiRecipeBody">
+            <label style="font-size:11px; font-weight:600; color:var(--text-secondary);">DESCRIBE YOUR REQUIREMENTS</label>
+            <textarea class="input" style="margin-top: 4px; min-height: 80px;" id="aiPromptInput" placeholder="e.g. Create customer-level portfolio summary with project count and total budget."></textarea>
+            <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                <button class="btn btn-primary" onclick="generateAIRecipe()">Generate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- CHAT BUBBLE -->
+    <div class="chat-bubble" onclick="toggleChat()">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 5.94 2 10.8c0 2.54 1.21 4.85 3.18 6.47V22l3.91-2.18c.89.24 1.86.37 2.91.37 5.52 0 10-3.94 10-8.8S17.52 2 12 2zm0 16.2c-.92 0-1.81-.13-2.64-.37l-.32-.09-2.32 1.29v-2.04l-.26-.22C4.71 15.2 4 12.98 4 10.8 4 6.93 7.58 3.8 12 3.8s8 3.13 8 7c0 3.87-3.58 7.4-8 7.4z"/>
+        </svg>
+    </div>
+
+    <!-- CHAT WINDOW -->
+    <div class="chat-window" id="chatWindow">
+        <div class="chat-header">
+            <span>✨ AI Assistant</span>
+            <button class="chat-close-btn" onclick="toggleChat()">✕</button>
+        </div>
+        <div class="chat-body" id="chatBody">
+            <!-- Messages will be injected here -->
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Gõ yêu cầu hoặc câu hỏi..." onkeypress="handleKeyPress(event)">
+            <button class="chat-send-btn" onclick="sendMessage()">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- STATE & ROUTING ---
+        let currentRole = 'Administrator';
+
+        function navigate(viewName) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            const view = document.getElementById('view-' + viewName);
+            if (view) {
+                view.classList.add('active');
+            }
+
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            const navMap = {
+                'workspace': 'Workspace',
+                'ingestion': 'Ingestion Runs',
+                'ingestion_detail': 'Ingestion Runs',
+                'bronze': 'Bronze',
+                'profiles': 'Profiles',
+                'rules': 'Rules & Evidence',
+                'bronze_approval': 'Bronze Approval',
+                'mapping': 'Mapping',
+                'silver': 'Silver',
+                'gold': 'Gold',
+                'activity': 'Activity'
+            };
+
+            document.getElementById('currentPageTitle').innerText = navMap[viewName] || 'Workspace';
+            document.querySelector('.content').scrollTop = 0;
+        }
+
+        function changeRole(role) {
+            currentRole = role;
+            showToast(`Role switched to ${role}`);
+        }
+
+        // --- MODALS & OVERLAY ---
+        function openModal(id) {
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById(id).classList.add('active');
+        }
+
+        function openDrawer(id) {
+            document.getElementById('overlay').classList.add('active');
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeAll() {
+            document.getElementById('overlay').classList.remove('active');
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+            document.querySelectorAll('.drawer').forEach(d => d.classList.remove('active'));
+        }
+
+        // --- INGESTION RUN SIMULATION ---
+        function openRunModal() { openModal('runModal'); }
+
+        function startRun() {
+            const body = document.getElementById('runModalBody');
+            body.innerHTML = `
+                <div style="text-align: center; padding: 20px 0;">
+                    <h4 id="runStep" style="margin-bottom: 20px;">Creating ingestion run...</h4>
+                    <div class="progress-bar" style="height: 8px; margin-bottom: 20px;">
+                        <div class="progress-fill" id="runProgress" style="width: 0%;"></div>
+                    </div>
+                    <div id="runPercentage" style="font-size: 14px; font-weight: 600; color: var(--text-secondary);">0%</div>
+                </div>
+            `;
+
+            const steps = [
+                { text: "Creating ingestion run", pct: 15 },
+                { text: "Reading TimerApp lists", pct: 35 },
+                { text: "Capturing Bronze snapshot", pct: 55 },
+                { text: "Computing row hashes", pct: 75 },
+                { text: "Profiling columns", pct: 90 },
+                { text: "Generating rule suggestions", pct: 100 }
+            ];
+
+            let currentStep = 0;
+
+            const interval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    document.getElementById('runStep').innerText = steps[currentStep].text + "...";
+                    document.getElementById('runProgress').style.width = steps[currentStep].pct + '%';
+                    document.getElementById('runPercentage').innerText = steps[currentStep].pct + '%';
+                    currentStep++;
+                } else {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        closeAll();
+                        navigate('ingestion_detail');
+                        showToast('Data Quality Run completed successfully');
+                    }, 500);
+                }
+            }, 800);
+        }
+
+        // --- TABS ---
+        function switchTab(event, tabId) {
+            const cardBody = event.target.closest('.card-body');
+            if (!cardBody) return;
+            cardBody.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            cardBody.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // --- BRONZE ---
+        function showBronzeDetail(name, count) {
+            document.getElementById('bronzeAssetName').innerText = name;
+            const table = document.getElementById('bronzeRowsTable');
+            table.innerHTML = '';
+            for(let i=1; i<=3; i++) {
+                table.innerHTML += `
+                    <tr>
+                        <td>${i}</td>
+                        <td>${i * 10}</td>
+                        <td style="font-family:monospace; font-size:11px;">W/"1${i}"</td>
+                        <td style="font-family:monospace; font-size:11px;">a1b${i}...</td>
+                        <td>20/08 10:35</td>
+                        <td><button class="btn btn-text" onclick="openPayloadDrawer()">View JSON</button></td>
+                    </tr>
+                `;
+            }
+            document.getElementById('bronze-detail-container').style.display = 'block';
+        }
+
+        function closeBronzeDetail() { document.getElementById('bronze-detail-container').style.display = 'none'; }
+        function openPayloadDrawer() { openDrawer('payloadDrawer'); }
+
+        // --- PROFILES ---
+        function openProfileModal(col, dtype, stype, quality, issues) {
+            document.getElementById('profileColName').innerText = col;
+            document.getElementById('profileDType').innerText = dtype;
+            document.getElementById('profileSType').innerText = stype;
+            document.getElementById('profileQuality').innerText = quality;
+            document.getElementById('profileNulls').innerText = "124";
+            document.getElementById('profileUniques').innerText = "19,358";
+            openModal('profileModal');
+        }
+
+        // --- RULES ---
+        function approveRule(btn) {
+            const card = btn.closest('.card');
+            card.style.opacity = '0.5';
+            card.style.pointerEvents = 'none';
+            card.querySelector('.badge.badge-primary').innerText = 'APPROVED';
+            card.querySelector('.badge.badge-primary').classList.remove('badge-primary');
+            card.querySelector('.badge.badge-primary').classList.add('badge-success');
+            showToast('Rule Approved');
+        }
+
+        function openRejectModal() { openModal('rejectModal'); }
+        function openEditRuleModal() { openModal('editRuleModal'); }
+        function openEvidenceDrawer() { openDrawer('evidenceDrawer'); }
+
+        // --- BRONZE APPROVAL ---
+        function openApproveBronzeModal() { openModal('approveBronzeModal'); }
+
+        function confirmBronzeApproval() {
+            closeAll();
+            document.getElementById('bronzeApprovalActions').style.display = 'none';
+            document.getElementById('bronzeApprovedBanner').style.display = 'block';
+            document.getElementById('bronzeStatusPill').className = 'status-pill approved';
+            document.getElementById('bronzeStatusPill').innerText = 'APPROVED';
+            showToast('Bronze Layer Approved');
+        }
+
+        // --- GENERIC APPROVALS ---
+        function openApproveModal(layer) {
+            document.getElementById('approveGenericTitle').innerText = `Approve ${layer} Layer?`;
+            document.getElementById('approveGenericText').innerText = `Are you sure you want to approve the ${layer} layer? This will unlock downstream capabilities.`;
+            openModal('approveGenericModal');
+        }
+
+        // --- GOLD ---
+        function selectRecipe(name) { document.getElementById('selectedRecipeName').innerText = name; }
+
+        function openAIGenerator() {
+            openModal('aiRecipeModal');
+            document.getElementById('aiRecipeBody').innerHTML = `
+                <label style="font-size:11px; font-weight:600; color:var(--text-secondary);">DESCRIBE YOUR REQUIREMENTS</label>
+                <textarea class="input" style="margin-top: 4px; min-height: 80px;" id="aiPromptInput" placeholder="e.g. Create customer-level portfolio summary with project count and total budget."></textarea>
+                <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+                    <button class="btn btn-primary" onclick="generateAIRecipe()">Generate</button>
+                </div>
+            `;
+        }
+
+        function generateAIRecipe() {
+            const body = document.getElementById('aiRecipeBody');
+            body.innerHTML = `
+                <div style="text-align: center; padding: 20px 0;">
+                    <div class="progress-bar" style="height: 4px; margin-bottom: 20px;">
+                        <div class="progress-fill" style="width: 100%; animation: pulse 1.5s infinite;"></div>
+                    </div>
+                    <p>AI is analyzing Silver schema...</p>
+                </div>
+            `;
+
+            setTimeout(() => {
+                body.innerHTML = `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 8px; color: var(--primary);">✨ AI Generated Recipe Preview</h4>
+                        <p style="font-size: 12px; color: var(--text-secondary);">Review the generated recipe below. You must explicitly approve it before execution.</p>
+                    </div>
+
+                    <div style="border: 1px solid var(--border); border-radius: 4px; padding: 16px; background: var(--bg-app);">
+                        <div style="margin-bottom: 12px;"><strong>Recipe Name:</strong> Customer Portfolio Summary</div>
+                        <div style="margin-bottom: 12px;"><strong>Sources:</strong> Silver_Projects</div>
+                        <div style="margin-bottom: 12px;"><strong>Dimensions:</strong> customer_name</div>
+                        <div style="margin-bottom: 12px;"><strong>Measures:</strong> COUNT(project_name), SUM(budget)</div>
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+                        <button class="btn btn-outline" onclick="closeAll()">Discard</button>
+                        <button class="btn btn-primary" onclick="closeAll(); showToast('Recipe Approved and Saved');">Approve Recipe</button>
+                    </div>
+                `;
+            }, 1500);
+        }
+
+        function runGoldRecipe() { showToast('Gold Recipe Executed. Reconciliation PASSED.'); }
+
+        // --- TOAST ---
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.style.backgroundColor = type === 'danger' ? 'var(--danger)' : 'var(--text-main)';
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3000);
+        }
+
+        // --- CHAT LOGIC ---
+        function toggleChat() {
+            const chatWindow = document.getElementById('chatWindow');
+            const isHidden = !chatWindow.classList.contains('active');
+            chatWindow.classList.toggle('active');
+            if (isHidden) {
+                initChat();
+            }
+        }
+
+        function initChat() {
+            const chatBody = document.getElementById('chatBody');
+            chatBody.innerHTML = ''; // Clear previous messages
+
+            addMessage('bot', 'Xin chào! Tôi là Trợ lý AI. Tôi có thể giúp bạn điều hướng, giải đáp thắc mắc hoặc đưa ra gợi ý về luồng dữ liệu.');
+
+            setTimeout(() => {
+                addMessage('bot', 'Hiện tại bạn đang ở bước <strong>Review Rules</strong>. Bạn có muốn tôi đưa bạn đến các tác vụ tiếp theo không?', [
+                    { text: 'Xem 3 Rules đang chờ duyệt', action: 'navigate("rules")' },
+                    { text: 'Đi đến Phê duyệt Bronze', action: 'navigate("bronze_approval")' },
+                    { text: 'Xem kết quả Silver', action: 'navigate("silver")' }
+                ]);
+            }, 1000);
+        }
+
+        function addMessage(sender, text, suggestions = []) {
+            const chatBody = document.getElementById('chatBody');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${sender}`;
+            msgDiv.innerHTML = text;
+
+            if (suggestions.length > 0) {
+                const suggDiv = document.createElement('div');
+                suggDiv.className = 'chat-suggestions';
+                suggestions.forEach(s => {
+                    const btn = document.createElement('button');
+                    btn.className = 'chat-suggestion-btn';
+                    btn.innerText = s.text;
+                    btn.onclick = () => {
+                        addMessage('user', s.text);
+                        eval(s.action);
+                    };
+                    suggDiv.appendChild(btn);
+                });
+                msgDiv.appendChild(suggDiv);
+            }
+
+            chatBody.appendChild(msgDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMessage('user', text);
+            input.value = '';
+
+            setTimeout(() => {
+                processAIResponse(text.toLowerCase());
+            }, 800);
+        }
+
+        function processAIResponse(text) {
+            let response = "";
+            let action = null;
+
+            // Navigation intents
+            if (text.includes('workspace') || text.includes('home') || text.includes('trang chủ')) {
+                action = 'workspace'; response = "Đang chuyển bạn đến Workspace...";
+            } else if (text.includes('ingestion') || text.includes('runs')) {
+                action = 'ingestion'; response = "Đang mở danh sách Ingestion Runs...";
+            } else if (text.includes('bronze approval') || text.includes('duyệt bronze') || text.includes('phê duyệt bronze')) {
+                action = 'bronze_approval'; response = "Đang chuyển đến màn hình Phê duyệt Bronze...";
+            } else if (text.includes('silver')) {
+                action = 'silver'; response = "Đang mở dữ liệu Silver...";
+            } else if (text.includes('gold')) {
+                action = 'gold'; response = "Đang mở công thức Gold...";
+            } else if (text.includes('mapping') || text.includes('mappings')) {
+                action = 'mapping'; response = "Đang mở sơ đồ Mapping...";
+            } else if (text.includes('activity') || text.includes('history')) {
+                action = 'activity'; response = "Đang mở lịch sử Activity...";
+            } else if (text.includes('profiles')) {
+                action = 'profiles'; response = "Đang mở các Profiles...";
+            } else if (text.includes('rules')) {
+                action = 'rules'; response = "Đang mở trang Rules & Evidence...";
+            } else if (text.includes('bronze')) {
+                action = 'bronze'; response = "Đang mở layer Bronze...";
+            }
+            // Q&A intents
+            else if (text.includes('bronze là gì') || text.includes('what is bronze')) {
+                response = "Bronze là lớp dữ liệu thô (raw) được chụp lại (snapshot) từ SharePoint. Nó là bất biến (immutable) và không bao giờ bị sửa đổi. Trình duyệt không bao giờ tải trực tiếp toàn bộ dữ liệu thô này để đảm bảo bảo mật.";
+            } else if (text.includes('rules') || text.includes('quy tắc')) {
+                response = "Hiện tại có 3 quy tắc AI đang chờ bạn duyệt:\n1. Email phải đúng định dạng (Severity: High)\n2. StartDate không được trống (Severity: High)\n3. Budget phải là số và >= 0 (Severity: Medium)";
+            } else if (text.includes('quality') || text.includes('chất lượng')) {
+                response = "Điểm chất lượng dữ liệu (Quality Score) tổng thể hiện tại là 91%. Cột có chất lượng thấp nhất là Email (82%) do có nhiều vi phạm định dạng.";
+            } else {
+                response = "Tôi có thể giúp bạn:\n- Điều hướng: Gõ 'đi đến silver', 'xem profiles', 'về home'...\n- Giải đáp: 'Bronze là gì?', 'Có bao nhiêu rules đang chờ duyệt?'...";
+            }
+
+            addMessage('bot', response.replace(/\n/g, '<br>'));
+
+            if (action) {
+                setTimeout(() => navigate(action), 1000);
+            }
+        }
+
+    </script>
+</body>
+</html>
